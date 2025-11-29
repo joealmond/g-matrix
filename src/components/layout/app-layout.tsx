@@ -13,6 +13,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import {
+  ArrowLeft,
   BarChart,
   HelpCircle,
   Home,
@@ -182,12 +183,15 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 function UserLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const router = useRouter();
+  const pathname = usePathname();
   const [isDialogOpen, setDialogOpen] = useState(false);
 
   const handleProductIdentified = (productName: string) => {
     setDialogOpen(false);
     router.push(`/product/${encodeURIComponent(productName)}`);
   }
+
+  const isProductPage = pathname.startsWith('/product/');
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -231,12 +235,21 @@ function UserLayout({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex-1" />
            <div className="hidden md:flex items-center gap-4">
-             <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
-                <Button>
-                  <Upload className="mr-2 h-4 w-4" />
-                  <span>Scan Product</span>
-                </Button>
-              </ImageUploadDialog>
+              {isProductPage ? (
+                 <Button asChild>
+                    <Link href="/">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back to Home
+                    </Link>
+                 </Button>
+              ) : (
+                <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
+                  <Button>
+                    <Upload className="mr-2 h-4 w-4" />
+                    <span>Scan Product</span>
+                  </Button>
+                </ImageUploadDialog>
+              )}
             <Button variant="ghost" size="icon" asChild>
               <Link href="/account">
                 <User />

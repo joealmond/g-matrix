@@ -75,10 +75,6 @@ export default function ProductPage() {
             <h1 className="font-headline text-3xl">
               Rate: {initialProductName}
             </h1>
-            <Button variant="outline" onClick={() => router.push('/')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Home
-            </Button>
         </div>
 
       <div className="md:col-span-2 space-y-6">
