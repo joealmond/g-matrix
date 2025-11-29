@@ -2,20 +2,20 @@
 
 import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { TrendingFoods } from '@/components/dashboard/trending-foods';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Save, Undo } from 'lucide-react';
+import { Save, Undo } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { DraggableDot } from '@/components/dashboard/draggable-dot';
 
 export default function ProductPage() {
   const params = useParams();
-  const router = useRouter();
   const { toast } = useToast();
   
   const initialProductName = decodeURIComponent(params.name as string);
@@ -45,6 +45,7 @@ export default function ProductPage() {
     }, 100);
   };
   
+  // The MatrixChart on this page will have no data, it's just for background.
   const chartData = vibe ? [{ product: productName, safety: vibe.safety, taste: vibe.taste }] : [];
 
   const handleSaveEdit = () => {
@@ -65,7 +66,7 @@ export default function ProductPage() {
     }
   }
   
-  const handleVibeChangeFromChart = (newVibe: { safety: number, taste: number}) => {
+  const handleVibeChange = (newVibe: { safety: number, taste: number}) => {
     setVibe(newVibe);
   }
 
@@ -86,21 +87,23 @@ export default function ProductPage() {
 
       {showChart && vibe && (
          <div className="md:col-span-3 grid gap-6 md:grid-cols-3" ref={chartRef}>
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 relative">
               <h2 className="text-2xl font-headline mb-4">Product Vibe</h2>
               <MatrixChart 
-                chartData={chartData} 
-                highlightedProduct={productName} 
-                onVibeChange={handleVibeChangeFromChart}
-                isDraggable={true}
+                chartData={[]} // No data, just background
                 showTooltip={false}
+              />
+              <DraggableDot 
+                safety={vibe.safety}
+                taste={vibe.taste}
+                onVibeChange={handleVibeChange}
               />
             </div>
             <div className="md:col-span-1">
                  <Card>
                     <CardHeader>
                         <CardTitle className='font-headline'>Fine-Tune Vibe</CardTitle>
-                        <CardDescription>Adjust the scores to pinpoint the vibe.</CardDescription>
+                        <CardDescription>Drag the dot or use the sliders to pinpoint the vibe.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
