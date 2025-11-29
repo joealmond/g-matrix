@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useUser } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type ImageUploadFormProps = {
@@ -22,7 +22,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { app } = useFirebase();
-  const { user } = useUser();
 
   const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
 
@@ -42,21 +41,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     }
 
     if (state.productName && selectedFile && app) {
-      if (!user) {
-        toast({
-          variant: "destructive",
-          title: "Authentication Required",
-          description: "Please sign in to upload images.",
-        });
-        return;
-      }
-      
       const uploadAndRedirect = async () => {
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
-          const storageRef = ref(storage, `uploads/${user.uid}/${selectedFile.name}-${Date.now()}`);
+          const storageRef = ref(storage, `uploads/${selectedFile.name}-${Date.now()}`);
           
           console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, selectedFile, {
@@ -82,7 +72,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-        } finally {
           setIsUploading(false);
         }
       };
