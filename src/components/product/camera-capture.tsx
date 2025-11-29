@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useActionState } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
+import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -9,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useTransition } from 'react';
+
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -20,15 +21,16 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const { app } = useFirebase();
   const { toast } = useToast();
 
+  const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
+
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -70,63 +72,47 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       }
     };
   }, [toast]);
-
-  const analyzeAndUpload = async () => {
-    if (!capturedFile) {
-        setError('No captured file to analyze.');
-        return;
-    }
-    if (!app) {
-        setError('Firebase is not initialized.');
-        return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-        // 1. Analyze Image
-        const formData = new FormData();
-        formData.append('photo', capturedFile);
-        const analysisResult = await handleImageAnalysis({}, formData);
-
-        if (analysisResult.error) {
-            throw new Error(analysisResult.error);
-        }
-
-        const productName = analysisResult.productName;
-        if (!productName) {
-            throw new Error('Could not identify the product.');
-        }
-
-        // 2. Upload Image
-        const storage = getStorage(app);
-        const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
-        const snapshot = await uploadBytes(storageRef, capturedFile, {
-            contentType: capturedFile.type,
-        });
-        const imageUrl = await getDownloadURL(snapshot.ref);
-
-        // 3. Redirect
-        if (onProductIdentified) {
-            onProductIdentified(productName, imageUrl);
-        } else {
-            router.push(`/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-        }
-
-    } catch (e: any) {
-        console.error('Analysis or upload failed:', e);
-        const errorMessage = e.message || 'An unexpected error occurred.';
-        setError(errorMessage);
+  
+    useEffect(() => {
+    if (state.error) {
         toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: errorMessage,
+            variant: "destructive",
+            title: "Error",
+            description: state.error,
         });
-    } finally {
-        setIsProcessing(false);
     }
-  };
+
+    if (state.productName && capturedFile && app && !isUploading) {
+      const uploadAndRedirect = async () => {
+        setIsUploading(true);
+        try {
+          const storage = getStorage(app);
+          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          const snapshot = await uploadBytes(storageRef, capturedFile, {
+            contentType: capturedFile.type,
+          });
+          const imageUrl = await getDownloadURL(snapshot.ref);
+
+          if (onProductIdentified) {
+            onProductIdentified(state.productName!, imageUrl);
+          } else {
+            router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+          }
+        } catch (uploadError: any) {
+          console.error("Upload failed:", uploadError);
+          toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: uploadError.message || "Could not upload the product image.",
+          });
+           setIsUploading(false);
+        }
+      };
+      uploadAndRedirect();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, capturedFile, app, router, toast, onProductIdentified]);
+
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -156,7 +142,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const handleRetake = () => {
     setCapturedImage(null);
     setCapturedFile(null);
-    setError(null);
   };
 
   const dataURLtoFile = (dataurl: string, filename: string) => {
@@ -194,9 +179,13 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       </Alert>
     );
   }
+  
+  const isBusy = isProcessing || isUploading;
+  const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Captured Image';
+
 
   return (
-    <div className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -216,30 +205,46 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         </div>
       ) : (
         <div className="space-y-4">
+           {capturedFile && <input type="hidden" name="photo" value={capturedFile.name} />}
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={handleRetake} type="button" disabled={isProcessing}>
+            <Button variant="outline" onClick={handleRetake} type="button" disabled={isBusy}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-            <Button onClick={analyzeAndUpload} disabled={isProcessing} className="w-full" type="button">
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isProcessing ? 'Processing...' : 'Analyze Captured Image'}
+            <Button type="submit" disabled={isBusy || !capturedFile} className="w-full"
+             onClick={(e) => {
+                if (!capturedFile) {
+                  e.preventDefault();
+                   toast({
+                        variant: 'destructive',
+                        title: 'No Image',
+                        description: 'Please capture an image first.',
+                    });
+                  return;
+                }
+                const formData = new FormData(formRef.current!);
+                formData.set('photo', capturedFile);
+                formAction(formData);
+             }}
+            >
+              {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {buttonText}
             </Button>
           </div>
         </div>
       )}
 
-      {error && (
+      {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
-    </div>
+    </form>
   );
 }

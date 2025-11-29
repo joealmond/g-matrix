@@ -2,8 +2,7 @@
 
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { initializeFirebase } from '@/firebase';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
@@ -27,26 +26,6 @@ const formSchema = z.object({
     ),
 });
 
-
-export type ImageAnalysisSuccessState = {
-  productName: string | null;
-  error: null;
-};
-
-export type ImageAnalysisErrorState = {
-  productName: null;
-  error: string;
-}
-
-export type ImageAnalysisState = ImageAnalysisSuccessState | ImageAnalysisErrorState;
-
-
-const initialState: ImageAnalysisState = {
-  productName: null,
-  error: null,
-};
-
-
 export async function handleImageAnalysis(prevState: any, formData: FormData): Promise<ImageAnalysisState> {
   const validatedFields = formSchema.safeParse({
     photo: formData.get('photo'),
@@ -62,7 +41,6 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
   const file = validatedFields.data.photo;
   
   try {
-    // 1. Analyze the image with AI to get product name
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
     const photoDataUri = `data:${file.type};base64,${base64String}`;
@@ -70,16 +48,14 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
     const result = await extractProductNameFromImage({ photoDataUri });
     const productName = result.productName || "Unnamed Product";
 
-    // 2. Return product name
     return { productName, error: null };
 
   } catch (error: any) {
-    console.error("Image analysis or upload failed:", JSON.stringify(error, null, 2));
-    const errorMessage = error.message || 'An unexpected error occurred.';
-    const errorCode = error.code || '';
+    console.error("Image analysis failed:", JSON.stringify(error, null, 2));
+    const errorMessage = error.message || 'An unexpected error occurred during image analysis.';
     return {
       productName: null,
-      error: `Analysis/Upload failed: ${errorMessage} (${errorCode})`,
+      error: `Analysis failed: ${errorMessage}`,
     };
   }
 }

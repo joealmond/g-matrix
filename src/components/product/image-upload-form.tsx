@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useActionState, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
+import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,18 +24,57 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const { toast } = useToast();
   const { app } = useFirebase();
 
+  const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
+
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    if (state.error) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: state.error,
+        });
+    }
+
+    if (state.productName && selectedFile && app && !isUploading) {
+      const uploadAndRedirect = async () => {
+        setIsUploading(true);
+        try {
+          const storage = getStorage(app);
+          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          const snapshot = await uploadBytes(storageRef, selectedFile, {
+            contentType: selectedFile.type,
+          });
+          const imageUrl = await getDownloadURL(snapshot.ref);
+
+          if (onProductIdentified) {
+            onProductIdentified(state.productName!, imageUrl);
+          } else {
+            router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+          }
+        } catch (uploadError: any) {
+          console.error("Upload failed:", uploadError);
+          toast({
+            variant: "destructive",
+            title: "Upload Failed",
+            description: uploadError.message || "Could not upload the product image.",
+          });
+           setIsUploading(false);
+        }
+      };
+      uploadAndRedirect();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, selectedFile, app, router, toast, onProductIdentified]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
       setSelectedFile(file);
-      setError(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -74,67 +114,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     const file = e.dataTransfer.files[0];
     handleFile(file);
   };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedFile) {
-        setError('Please select an image to upload.');
-        return;
-    }
-    if (!app) {
-        setError('Firebase is not initialized.');
-        return;
-    }
-
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-        // 1. Analyze Image
-        const formData = new FormData();
-        formData.append('photo', selectedFile);
-        const analysisResult = await handleImageAnalysis({}, formData);
-
-        if (analysisResult.error) {
-            throw new Error(analysisResult.error);
-        }
-
-        const productName = analysisResult.productName;
-        if (!productName) {
-            throw new Error('Could not identify the product.');
-        }
-
-        // 2. Upload Image
-        const storage = getStorage(app);
-        const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
-        const snapshot = await uploadBytes(storageRef, selectedFile, {
-            contentType: selectedFile.type,
-        });
-        const imageUrl = await getDownloadURL(snapshot.ref);
-
-        // 3. Redirect
-        if (onProductIdentified) {
-            onProductIdentified(productName, imageUrl);
-        } else {
-            router.push(`/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-        }
-
-    } catch (e: any) {
-        console.error('Analysis or upload failed:', e);
-        const errorMessage = e.message || 'An unexpected error occurred.';
-        setError(errorMessage);
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: errorMessage,
-        });
-    } finally {
-        setIsProcessing(false);
-    }
-  };
+  
+  const isBusy = isProcessing || isUploading;
+  const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Image';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
@@ -173,16 +158,16 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={isProcessing || !selectedFile} className="w-full">
-        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {isProcessing ? 'Processing...' : 'Analyze Image'}
+      <Button type="submit" disabled={isBusy || !selectedFile} className="w-full">
+        {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {buttonText}
       </Button>
 
-      {error && (
+      {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
     </form>
