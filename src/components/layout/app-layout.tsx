@@ -26,7 +26,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     router.push(url);
   }
 
-  const isProductPage = pathname.startsWith('/vibe-check/');
+  const isSpecialPage = pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/');
 
   const handleScanClick = () => {
     setDialogOpen(true);
@@ -74,7 +74,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex-1" />
            <div className="flex items-center gap-4">
-              {isProductPage ? (
+              {isSpecialPage ? (
                  <Button asChild>
                     <Link href="/">
                       <ArrowLeft className="mr-2 h-4 w-4" />
