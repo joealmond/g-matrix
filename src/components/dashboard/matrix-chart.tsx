@@ -13,7 +13,6 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
 import React from 'react';
 import {
   Scatter,
@@ -25,6 +24,7 @@ import {
   ResponsiveContainer,
   ReferenceArea,
   ZAxis,
+  Dot,
 } from 'recharts';
 
 export const chartColors = [
@@ -72,21 +72,19 @@ const CustomDot = (props: any) => {
   };
   
   return (
-     <g onClick={handleClick} className="cursor-pointer">
-      <circle
-        cx={cx}
-        cy={cy}
-        r={isHighlighted ? 10 : 6}
-        fill="currentColor"
-        className={cn(
-          "transition-all drop-shadow-lg",
-          isHighlighted && "stroke-primary-foreground/50"
-        )}
-        strokeWidth={isHighlighted ? 2 : 0}
-      />
-    </g>
+    <Dot
+      cx={cx}
+      cy={cy}
+      r={isHighlighted ? 8 : 6}
+      stroke={isHighlighted ? 'hsl(var(--primary-foreground))' : props.fill}
+      strokeWidth={isHighlighted ? 2 : 0}
+      fill={props.fill}
+      onClick={handleClick}
+      className="cursor-pointer drop-shadow-lg transition-all"
+    />
   );
 };
+
 
 export function MatrixChart({
   chartData,
@@ -240,16 +238,15 @@ export function MatrixChart({
                   chartData.map((item, index) => (
                     <Scatter
                       key={item.product}
-                      name={item.product}
                       data={[item]}
+                      name={item.product}
                       fill={chartColors[index % chartColors.length]}
-                      shape={(props) => (
+                      shape={
                         <CustomDot
-                          {...props}
-                          highlightedProduct={highlightedProduct}
                           onPointClick={onPointClick}
+                          highlightedProduct={highlightedProduct}
                         />
-                      )}
+                      }
                     />
                   ))}
               </ScatterChart>
