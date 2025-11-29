@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Scatter,
   ScatterChart,
@@ -84,9 +84,10 @@ const CustomDot = (props: any) => {
        <Dot
         cx={cx}
         cy={cy}
-        r={isHighlighted ? 10 : 6}
+        r={isHighlighted ? 10 : 8}
         fill={dotColor}
-        strokeWidth={0}
+        strokeWidth={2}
+        stroke={'hsl(var(--primary-foreground))'}
         className={cn(
           'cursor-pointer drop-shadow-lg',
           'transition-all'
