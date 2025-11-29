@@ -12,6 +12,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
@@ -24,7 +25,6 @@ import {
   ResponsiveContainer,
   ReferenceArea,
   ZAxis,
-  Cell,
   Dot,
 } from 'recharts';
 
@@ -71,7 +71,8 @@ const CustomDot = (props: any) => {
     payload,
     index,
     isDraggable,
-    handlePointerDown,
+    onMouseDown,
+    onTouchStart,
     highlightedProduct,
   } = props;
   const isHighlighted = highlightedProduct === payload.product;
@@ -84,8 +85,8 @@ const CustomDot = (props: any) => {
       fill={chartColors[index % chartColors.length]}
       stroke={isHighlighted ? 'white' : 'transparent'}
       strokeWidth={isHighlighted ? 3 : 0}
-      onMouseDown={handlePointerDown}
-      onTouchStart={handlePointerDown}
+      onMouseDown={onMouseDown}
+      onTouchStart={onTouchStart}
       className={cn(
         isDraggable ? 'cursor-grab' : 'cursor-pointer',
         isHighlighted && !isDraggable ? 'animate-pulse' : '',
@@ -104,6 +105,7 @@ export function MatrixChart({
   isDraggable = false,
   showTooltip = true,
 }: MatrixChartProps) {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null); // To get access to chart methods
   const [isDragging, setIsDragging] = useState(false);
@@ -140,7 +142,7 @@ export function MatrixChart({
 
     }, []);
 
-  const handlePointerDown = useCallback((props: any, e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDraggable || !onVibeChange) return;
     setIsDragging(true);
     e.stopPropagation();
@@ -203,9 +205,9 @@ export function MatrixChart({
                 ref={chartRef}
                 margin={{
                   top: 20,
-                  right: 20,
+                  right: isMobile ? 10 : 20,
                   bottom: 20,
-                  left: 0,
+                  left: isMobile ? -20 : 0,
                 }}
               >
                 {/* Quadrant Backgrounds */}
@@ -280,7 +282,7 @@ export function MatrixChart({
                   <Label
                     value="Did you survive?"
                     angle={-90}
-                    offset={10}
+                    offset={isMobile ? 0 : 10}
                     position="insideLeft"
                     fill="hsl(var(--foreground))"
                     className="text-sm"
@@ -335,13 +337,15 @@ export function MatrixChart({
                 <Scatter
                   name="Products"
                   data={chartData}
-                  shape={
+                  shape={(props) => (
                     <CustomDot
+                      {...props}
                       isDraggable={isDraggable}
-                      handlePointerDown={handlePointerDown}
+                      onMouseDown={handlePointerDown}
+                      onTouchStart={handlePointerDown}
                       highlightedProduct={highlightedProduct}
                     />
-                  }
+                  )}
                   onClick={(data, index, event) => {
                     if (!isDragging) {
                       onPointClick?.(data.product);
