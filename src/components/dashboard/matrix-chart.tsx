@@ -182,11 +182,22 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick }: Mat
                   <ChartTooltipContent
                     labelKey="product"
                     nameKey="product"
-                    formatter={(value, name) => [
-                      value,
-                      name === 'taste' ? 'Taste' : 'Safety',
-                    ]}
+                    formatter={(value, name, props) => {
+                      const color = props.payload?.fill;
+                      if (name === 'product') {
+                        return (
+                          <span className="font-bold" style={{ color }}>
+                            {value}
+                          </span>
+                        );
+                      }
+                      return [
+                        value,
+                        name === 'taste' ? 'Taste' : 'Safety',
+                      ];
+                    }}
                     indicator="dot"
+                    className="min-w-[12rem] text-base"
                   />
                 }
               />
@@ -206,6 +217,7 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick }: Mat
                       stroke={isHighlighted ? 'white' : 'transparent'}
                       strokeWidth={isHighlighted ? 3 : 0}
                       className={isHighlighted ? 'animate-pulse' : ''}
+                      radius={isHighlighted ? 8 : 6}
                     />
                   );
                 })}
