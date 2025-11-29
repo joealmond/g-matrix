@@ -142,10 +142,9 @@ export function MatrixChart({
 
     }, []);
 
-  const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerDown = useCallback(() => {
     if (!isDraggable || !onVibeChange) return;
     setIsDragging(true);
-    e.stopPropagation();
   }, [isDraggable, onVibeChange]);
 
 
@@ -342,16 +341,16 @@ export function MatrixChart({
                     <CustomDot
                       {...props}
                       isDraggable={isDraggable}
-                      onMouseDown={handlePointerDown}
-                      onTouchStart={handlePointerDown}
+                      onMouseDown={(e: any) => handlePointerDown()}
+                      onTouchStart={(e: any) => handlePointerDown()}
                       highlightedProduct={highlightedProduct}
                     />
                   )}
                   onClick={(data, index, event) => {
-                    if (!isDragging) {
+                    if (!isDragging && event) {
                       onPointClick?.(data.product);
+                       event.stopPropagation();
                     }
-                    event.stopPropagation();
                   }}
                 />
               </ScatterChart>
