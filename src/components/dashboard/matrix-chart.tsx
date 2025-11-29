@@ -60,27 +60,24 @@ type MatrixChartProps = {
 };
 
 const CustomDot = (props: any) => {
-  const { cx, cy, payload, highlightedProduct, onPointClick } = props;
-  const isHighlighted = highlightedProduct === payload.product;
+  const { cx, cy, payload, onPointClick, highlightedProduct } = props;
 
   if (isNaN(cx) || isNaN(cy)) {
     return null;
   }
 
-  const handleClick = () => {
-    onPointClick?.(payload.product);
-  };
-  
+  const isHighlighted = highlightedProduct === payload.product;
+
   return (
     <Dot
       cx={cx}
       cy={cy}
-      r={isHighlighted ? 8 : 6}
-      stroke={isHighlighted ? 'hsl(var(--primary-foreground))' : props.fill}
-      strokeWidth={isHighlighted ? 2 : 0}
+      r={isHighlighted ? 10 : 6}
       fill={props.fill}
-      onClick={handleClick}
-      className="cursor-pointer drop-shadow-lg transition-all"
+      stroke={isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--card))'}
+      strokeWidth={2}
+      onClick={() => onPointClick?.(payload.product)}
+      className="cursor-pointer transition-all"
     />
   );
 };
@@ -216,9 +213,10 @@ export function MatrixChart({
                       labelKey="product"
                       nameKey="product"
                       formatter={(value, name, props) => {
+                        const payloadColor = props.payload?.fill;
                         if (name === 'product') {
                           return (
-                            <span className="font-bold" style={{ color: props.color }}>
+                            <span className="font-bold" style={{ color: payloadColor }}>
                               {value}
                             </span>
                           );
@@ -241,12 +239,7 @@ export function MatrixChart({
                       data={[item]}
                       name={item.product}
                       fill={chartColors[index % chartColors.length]}
-                      shape={
-                        <CustomDot
-                          onPointClick={onPointClick}
-                          highlightedProduct={highlightedProduct}
-                        />
-                      }
+                      shape={<CustomDot onPointClick={onPointClick} highlightedProduct={highlightedProduct} />}
                     />
                   ))}
               </ScatterChart>
