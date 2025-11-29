@@ -27,13 +27,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
-import { Fab } from '@/components/layout/fab';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState } from 'react';
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isMobile = useIsMobile();
   return (
     <SidebarProvider>
       <Sidebar>
@@ -168,20 +166,12 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
-        {isMobile && (
-          <ImageUploadDialog>
-            <Fab>
-              <Upload />
-            </Fab>
-          </ImageUploadDialog>
-        )}
       </SidebarInset>
     </SidebarProvider>
   );
 }
 
 function UserLayout({ children }: { children: React.ReactNode }) {
-  const isMobile = useIsMobile();
   const router = useRouter();
   const pathname = usePathname();
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -234,7 +224,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
             <span className="sr-only">G-Matrix</span>
           </Link>
           <div className="flex-1" />
-           <div className="hidden md:flex items-center gap-4">
+           <div className="flex items-center gap-4">
               {isProductPage ? (
                  <Button asChild>
                     <Link href="/">
@@ -261,13 +251,6 @@ function UserLayout({ children }: { children: React.ReactNode }) {
       <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
         {children}
       </main>
-       {isMobile && (
-          <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
-            <Fab>
-              <Upload />
-            </Fab>
-          </ImageUploadDialog>
-        )}
     </div>
   );
 }

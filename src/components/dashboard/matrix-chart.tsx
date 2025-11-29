@@ -64,6 +64,37 @@ type MatrixChartProps = {
   showTooltip?: boolean;
 };
 
+const CustomDot = (props: any) => {
+  const {
+    cx,
+    cy,
+    payload,
+    index,
+    isDraggable,
+    handlePointerDown,
+    highlightedProduct,
+  } = props;
+  const isHighlighted = highlightedProduct === payload.product;
+
+  return (
+    <Dot
+      cx={cx}
+      cy={cy}
+      r={isHighlighted ? 10 : 6}
+      fill={chartColors[index % chartColors.length]}
+      stroke={isHighlighted ? 'white' : 'transparent'}
+      strokeWidth={isHighlighted ? 3 : 0}
+      onMouseDown={handlePointerDown}
+      onTouchStart={handlePointerDown}
+      className={cn(
+        isDraggable ? 'cursor-grab' : 'cursor-pointer',
+        isHighlighted && !isDraggable ? 'animate-pulse' : '',
+        'transition-all'
+      )}
+    />
+  );
+};
+
 
 export function MatrixChart({
   chartData,
@@ -85,7 +116,9 @@ export function MatrixChart({
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       
-      const chart = chartRef.current.chart.getInternalInstance();
+      const chart = chartRef.current.getInternalAPI();
+      if (!chart) return null;
+
       const xAxisMap = chart.xAxisMap[0];
       const yAxisMap = chart.yAxisMap[0];
 
@@ -113,36 +146,38 @@ export function MatrixChart({
     e.stopPropagation();
   }, [isDraggable, onVibeChange]);
 
-  const handlePointerMove = useCallback((e: MouseEvent | TouchEvent) => {
+
+  const handlePointerMove = (e: MouseEvent | TouchEvent) => {
     if (isDragging && onVibeChange) {
       const newVibe = getVibeFromCoordinates(e);
       if (newVibe) {
         onVibeChange(newVibe);
       }
     }
-  }, [isDragging, onVibeChange, getVibeFromCoordinates]);
+  };
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = () => {
     setIsDragging(false);
-  }, []);
+  };
 
   useEffect(() => {
     if (isDraggable) {
-      document.addEventListener('mousemove', handlePointerMove);
-      document.addEventListener('mouseup', handlePointerUp);
-      document.addEventListener('touchmove', handlePointerMove);
-      document.addEventListener('touchend', handlePointerUp);
-    }
+      const moveHandler = (e: MouseEvent | TouchEvent) => handlePointerMove(e);
+      const upHandler = () => handlePointerUp();
 
-    return () => {
-      if (isDraggable) {
-        document.removeEventListener('mousemove', handlePointerMove);
-        document.removeEventListener('mouseup', handlePointerUp);
-        document.removeEventListener('touchmove', handlePointerMove);
-        document.removeEventListener('touchend', handlePointerUp);
-      }
-    };
-  }, [isDraggable, handlePointerMove, handlePointerUp]);
+      document.addEventListener('mousemove', moveHandler);
+      document.addEventListener('mouseup', upHandler);
+      document.addEventListener('touchmove', moveHandler);
+      document.addEventListener('touchend', upHandler);
+
+      return () => {
+        document.removeEventListener('mousemove', moveHandler);
+        document.removeEventListener('mouseup', upHandler);
+        document.removeEventListener('touchmove', moveHandler);
+        document.removeEventListener('touchend', upHandler);
+      };
+    }
+  }, [isDraggable, onVibeChange, getVibeFromCoordinates, isDragging]);
 
 
   return (
@@ -169,8 +204,8 @@ export function MatrixChart({
                 margin={{
                   top: 20,
                   right: 20,
-                  bottom: 40,
-                  left: 20,
+                  bottom: 20,
+                  left: 0,
                 }}
               >
                 {/* Quadrant Backgrounds */}
@@ -227,7 +262,7 @@ export function MatrixChart({
                 >
                   <Label
                     value="Was it good?"
-                    offset={-25}
+                    offset={-15}
                     position="insideBottom"
                     fill="hsl(var(--foreground))"
                     className="text-sm"
@@ -245,7 +280,7 @@ export function MatrixChart({
                   <Label
                     value="Did you survive?"
                     angle={-90}
-                    offset={-5}
+                    offset={10}
                     position="insideLeft"
                     fill="hsl(var(--foreground))"
                     className="text-sm"
@@ -296,33 +331,24 @@ export function MatrixChart({
                     />
                   }
                 />}
-                <ZAxis dataKey="product" name="product" range={[isDraggable ? 200 : 64, isDraggable ? 200 : 64]} />
+                <ZAxis dataKey="product" name="product" />
                 <Scatter
                   name="Products"
                   data={chartData}
+                  shape={
+                    <CustomDot
+                      isDraggable={isDraggable}
+                      handlePointerDown={handlePointerDown}
+                      highlightedProduct={highlightedProduct}
+                    />
+                  }
                   onClick={(data, index, event) => {
                     if (!isDragging) {
                       onPointClick?.(data.product);
                     }
                     event.stopPropagation();
                   }}
-                  onMouseDown={handlePointerDown}
-                  onTouchStart={handlePointerDown}
-                  className={cn(isDraggable ? "cursor-grab" : "cursor-pointer", isDragging ? 'cursor-grabbing' : '')}
-                >
-                  {chartData.map((entry, index) => {
-                    const isHighlighted = highlightedProduct === entry.product;
-                    return (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={chartColors[index % chartColors.length]}
-                        stroke={isHighlighted ? 'white' : 'transparent'}
-                        strokeWidth={isHighlighted ? 3 : 0}
-                        className={cn(isHighlighted ? 'animate-pulse' : '', 'transition-all')}
-                      />
-                    );
-                  })}
-                  </Scatter>
+                />
               </ScatterChart>
             </ResponsiveContainer>
           </ChartContainer>
