@@ -21,22 +21,24 @@ import {
   Label,
   ResponsiveContainer,
   ReferenceArea,
+  ZAxis,
+  Cell,
 } from 'recharts';
 
-const chartData = [
-  { product: 'Udis Gluten Free Bread', safety: 85, taste: 70 },
-  { product: 'Canyon Bakehouse Bread', safety: 95, taste: 90 },
-  { product: 'King Arthur Flour', safety: 98, taste: 95 },
-  { product: 'Bobs Red Mill Flour', safety: 92, taste: 88 },
-  { product: 'Cheerios', safety: 40, taste: 80 },
-  { product: 'Snyders GF Pretzels', safety: 75, taste: 92 },
-  { product: 'Katz Donuts', safety: 88, taste: 85 },
-  { product: 'Oreo Gluten Free', safety: 60, taste: 98 },
-  { product: 'Cardboard Box', safety: 10, taste: 5 },
-  { product: 'Mystery Meat', safety: 20, taste: 90 },
-  { product: 'Safe but Bland Crackers', safety: 95, taste: 20 },
-
+export const chartColors = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--primary))',
+  'hsl(var(--accent))',
+  '#f59e0b',
+  '#10b981',
+  '#3b82f6',
+  '#8b5cf6',
 ];
+
 
 const chartConfig = {
   safety: {
@@ -50,7 +52,14 @@ const chartConfig = {
   },
 };
 
-export function MatrixChart() {
+type MatrixChartProps = {
+  chartData: { product: string; safety: number; taste: number }[];
+  highlightedProduct?: string;
+  onPointClick?: (productName: string) => void;
+};
+
+
+export function MatrixChart({ chartData, highlightedProduct, onPointClick }: MatrixChartProps) {
   return (
     <Card>
       <CardHeader>
@@ -181,11 +190,26 @@ export function MatrixChart() {
                   />
                 }
               />
+              <ZAxis dataKey="product" name="product" />
               <Scatter
                 name="Products"
                 data={chartData}
-                fill="hsl(var(--primary))"
-              />
+                onClick={(data) => onPointClick?.(data.product)}
+                className="cursor-pointer"
+              >
+                {chartData.map((entry, index) => {
+                  const isHighlighted = highlightedProduct === entry.product;
+                   return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={chartColors[index % chartColors.length]}
+                      stroke={isHighlighted ? 'white' : 'transparent'}
+                      strokeWidth={isHighlighted ? 3 : 0}
+                      className={isHighlighted ? 'animate-pulse' : ''}
+                    />
+                  );
+                })}
+                </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
         </ChartContainer>

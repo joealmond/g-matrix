@@ -27,7 +27,12 @@ const IceIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none
 type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked' | null;
 type TasteVote = 'Yass' | 'Meh' | 'Pass' | null;
 
-export function VotingPanel({ productName }: { productName: string }) {
+interface VotingPanelProps {
+  productName: string;
+  onVibeSubmit?: () => void;
+}
+
+export function VotingPanel({ productName, onVibeSubmit }: VotingPanelProps) {
   const [safetyVote, setSafetyVote] = useState<SafetyVote>(null);
   const [tasteVote, setTasteVote] = useState<TasteVote>(null);
   const { toast } = useToast();
@@ -54,9 +59,9 @@ export function VotingPanel({ productName }: { productName: string }) {
         description: `Your vibe for ${productName} has been recorded.`,
     })
 
-    // Reset votes after submission
-    setSafetyVote(null);
-    setTasteVote(null);
+    if (onVibeSubmit) {
+      onVibeSubmit();
+    }
   }
 
 
