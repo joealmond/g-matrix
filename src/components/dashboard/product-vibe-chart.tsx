@@ -3,109 +3,38 @@
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import React from 'react';
 import {
-  Scatter,
-  ScatterChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Label,
   ResponsiveContainer,
   ReferenceArea,
-  ZAxis,
+  ScatterChart,
 } from 'recharts';
 
-export const chartColors = [
-  '#8884d8',
-  '#82ca9d',
-  '#ffc658',
-  '#ff7300',
-  '#00C49F',
-  '#FFBB28',
-  '#FF8042',
-  '#f59e0b',
-  '#10b981',
-  '#3b82f6',
-  '#8b5cf6',
-];
 
-const chartConfig = {
-  safety: {
-    label: 'Safety',
-  },
-  taste: {
-    label: 'Taste',
-  },
-  product: {
-    label: 'Product',
-  },
-};
-
-type MatrixChartProps = {
-  chartData: { product: string; safety: number; taste: number }[];
-  highlightedProduct?: string | null;
-  onPointClick?: (productName: string) => void;
-};
-
-const CustomDot = (props: any) => {
-  const { cx, cy, payload, index, highlightedProduct, onPointClick } = props;
-  const isHighlighted = highlightedProduct === payload.product;
-  const dotColor = chartColors[index % chartColors.length];
-
-  if (isNaN(cx) || isNaN(cy)) {
-    return null;
-  }
-
-  const handleClick = () => {
-    onPointClick?.(payload.product);
-  };
-  
-  return (
-    <g onClick={handleClick} className="cursor-pointer">
-      <foreignObject x={cx - (isHighlighted ? 12 : 8)} y={cy - (isHighlighted ? 12 : 8)} width={isHighlighted ? 24 : 16} height={isHighlighted ? 24 : 16}>
-        <div
-          className={cn(
-            "w-4 h-4 rounded-full transition-all drop-shadow-lg",
-            isHighlighted && "ring-2 ring-offset-2 ring-offset-background w-6 h-6"
-          )}
-          style={{ 
-            backgroundColor: dotColor,
-            ringColor: dotColor
-          }}
-        />
-      </foreignObject>
-    </g>
-  );
-};
-
-export function MatrixChart({
-  chartData,
-  highlightedProduct,
-  onPointClick,
-}: MatrixChartProps) {
+export function ProductVibeChart() {
   const isMobile = useIsMobile();
-  const showDots = chartData.length > 0;
+  
+  const chartConfig = {
+    safety: {
+      label: 'Safety',
+    },
+    taste: {
+      label: 'Taste',
+    },
+  };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="font-headline">G-Matrix</CardTitle>
-        <CardDescription>Product Safety vs. Taste Ratings</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className={'cursor-default'}>
+      <CardContent className="pt-6">
+        <div className={'cursor-grab'}>
           <ChartContainer
             config={chartConfig}
             className="w-full aspect-square sm:aspect-video h-auto"
@@ -212,49 +141,6 @@ export function MatrixChart({
                     );
                   }}
                 />
-
-                <ChartTooltip
-                  cursor={{ strokeDasharray: '3 3' }}
-                  content={
-                    <ChartTooltipContent
-                      labelKey="product"
-                      nameKey="product"
-                      formatter={(value, name, props) => {
-                        const itemIndex = chartData.findIndex(d => d.product === props.payload.product);
-                        if (itemIndex === -1) return [value, name];
-                        const color = chartColors[itemIndex % chartColors.length];
-
-                        if (name === 'product') {
-                          return (
-                            <span className="font-bold" style={{ color }}>
-                              {value}
-                            </span>
-                          );
-                        }
-                        return [
-                          value,
-                          name === 'taste' ? 'Taste' : 'Safety',
-                        ];
-                      }}
-                      indicator="dot"
-                      className="min-w-[12rem] text-base"
-                    />
-                  }
-                />
-                <ZAxis dataKey="product" name="product" />
-                {showDots && (
-                  <Scatter
-                    name="Products"
-                    data={chartData}
-                    shape={(props) => (
-                      <CustomDot
-                        {...props}
-                        highlightedProduct={highlightedProduct}
-                        onPointClick={onPointClick}
-                      />
-                    )}
-                  />
-                )}
               </ScatterChart>
             </ResponsiveContainer>
           </ChartContainer>

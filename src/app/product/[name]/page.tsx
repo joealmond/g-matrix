@@ -4,7 +4,6 @@ import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { TrendingFoods } from '@/components/dashboard/trending-foods';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, Undo } from 'lucide-react';
@@ -13,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { DraggableDot } from '@/components/dashboard/draggable-dot';
+import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
 
 export default function ProductPage() {
   const params = useParams();
@@ -44,9 +44,6 @@ export default function ProductPage() {
       chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
-  
-  // The MatrixChart on this page will have no data, it's just for background.
-  const chartData = vibe ? [{ product: productName, safety: vibe.safety, taste: vibe.taste }] : [];
 
   const handleSaveEdit = () => {
     toast({
@@ -89,10 +86,7 @@ export default function ProductPage() {
          <div className="md:col-span-3 grid gap-6 md:grid-cols-3" ref={chartRef}>
             <div className="md:col-span-2 relative">
               <h2 className="text-2xl font-headline mb-4">Product Vibe</h2>
-              <MatrixChart 
-                chartData={[]} // No data, just background
-                showTooltip={false}
-              />
+              <ProductVibeChart />
               <DraggableDot 
                 safety={vibe.safety}
                 taste={vibe.taste}
