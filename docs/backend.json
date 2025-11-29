@@ -202,8 +202,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
@@ -336,3 +335,4 @@
     "reasoning": "This Firestore structure is designed to support the G-Matrix application, emphasizing security, scalability, and ease of debugging. The core principle is **Authorization Independence**, achieved through denormalization, to avoid `get()` calls in security rules and enable atomic operations.\n\n**Products:** Products are stored in a top-level `/products` collection. Reports and votes related to a product are stored in subcollections.  This enables efficient product listing and searching.\n\n**User Data:** User profiles are stored in `/users/{userId}`. User-specific data, such as analytics events, are stored in subcollections under the user's document.\n\n**Votes:** Votes for each product are stored in a subcollection `/products/{productId}/votes/{userId}`. This allows efficient querying of votes for a specific product and avoids authorization issues.\n\n**Reports:** Product reports are stored in a subcollection `/products/{productId}/reports/{reportId}`. This keeps reports associated with their products and allows efficient retrieval for moderation. An `isResolved` field allows moderators to track the status of reports. Admins can manage these reports.\n\n**Analytics Events:** Analytics events are stored under `/users/{userId}/analytics_events/{eventId}`. This allows tracking user-specific activities.\n\n**Ad Slots:** Ad slots are stored in a top-level `/ad_slots` collection, managed by admins.\n\n**Admin Roles:** Admin privileges are determined by the existence of a document in the `/roles_admin/{userId}` collection. This simplifies admin role management and avoids custom claims.\n\n**Authorization Independence (Denormalization):** The design avoids hierarchical dependencies. For example, vote documents don't need to fetch product data to validate permissions.  All necessary context is available within the vote document itself (though in this example it is implicit via the path).\n\n**QAPs (Rules Are Not Filters):** The structure enables secure `list` operations. For example, listing votes for a product is secure because votes are stored in a subcollection of the product.  Admin roles are managed using the existence of documents in `/roles_admin/{userId}`, making it efficient to check admin privileges.\n\n**Invariants:** The structure supports ownership invariants by using path-based ownership where applicable (e.g., `/users/{userId}/analytics_events/{eventId}`). Timestamps are stored directly within the analytics events."
   }
 }
+    
