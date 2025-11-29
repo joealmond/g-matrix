@@ -2,7 +2,7 @@
 
 import { useState, useRef, useActionState, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
-import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
+import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -44,6 +43,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
     if (state.productName && selectedFile && app) {
       const uploadAndRedirect = async () => {
+        if (isUploading) return;
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
@@ -77,14 +77,14 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-        } finally {
-            setIsUploading(false);
+          setIsUploading(false); // Reset on error
         }
+        // No finally block for setIsUploading, as we navigate away on success
       };
       uploadAndRedirect();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, state.error, app, onProductIdentified, router, toast]);
+  }, [state.productName, state.error]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {

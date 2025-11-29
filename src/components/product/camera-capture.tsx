@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
 import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useActionState } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -29,6 +30,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -83,6 +85,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
     if (state.productName && capturedFile && app) {
       const uploadImage = async () => {
+        if (isUploading) return;
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
@@ -116,14 +119,14 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-        } finally {
-            setIsUploading(false);
+          setIsUploading(false); // Reset on error
         }
+        // No finally block for setIsUploading, as we navigate away on success
       };
       uploadImage();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, state.error, app, onProductIdentified, router, toast]);
+  }, [state.productName, state.error]);
 
 
   const handleCapture = () => {
@@ -157,22 +160,21 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   };
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (!capturedFile) {
-        toast({
-            variant: 'destructive',
-            title: 'No Image',
-            description: 'Please capture an image first.',
-        });
-        return;
-      }
-      const formData = new FormData(e.currentTarget);
-      formData.set('photo', capturedFile);
-      formAction(formData);
-  }
+    e.preventDefault();
+    if (!capturedFile) {
+      toast({
+        variant: 'destructive',
+        title: 'No Image',
+        description: 'Please capture an image first.',
+      });
+      return;
+    }
+    const formData = new FormData(e.currentTarget);
+    formData.set('photo', capturedFile);
+    formAction(formData);
+  };
 
-
-  const dataURLtoFile = (dataurl: string, filename: string) => {
+  const dataURLtoFile = (dataurl: string, filename: string): File | null => {
     const arr = dataurl.split(',');
     if (arr.length < 2) return null;
     const mimeMatch = arr[0].match(/:(.*?);/);
@@ -211,9 +213,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const isBusy = isProcessing || isUploading;
   const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Captured Image';
 
-
   return (
-    <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
