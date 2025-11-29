@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { handleImageUpload } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,7 @@ function SubmitButton() {
 }
 
 export function ImageUploadForm() {
-  const [state, formAction] = useFormState(handleImageUpload, initialState);
+  const [state, formAction] = useActionState(handleImageUpload, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
