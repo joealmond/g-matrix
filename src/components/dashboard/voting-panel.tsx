@@ -28,8 +28,8 @@ type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked';
 type TasteVote = 'Yass' | 'Meh' | 'Pass';
 
 const voteMapping = {
-  safety: { 'Clean': 100, 'Sketchy': 50, 'Wrecked': 0 },
-  taste: { 'Yass': 100, 'Meh': 50, 'Pass': 0 }
+  safety: { 'Clean': 80, 'Sketchy': 50, 'Wrecked': 20 },
+  taste: { 'Yass': 80, 'Meh': 50, 'Pass': 20 }
 };
 
 interface VotingPanelProps {
