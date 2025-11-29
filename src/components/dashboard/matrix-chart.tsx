@@ -84,10 +84,9 @@ const CustomDot = (props: any) => {
        <Dot
         cx={cx}
         cy={cy}
-        r={isHighlighted ? 12 : 9}
+        r={isHighlighted ? 10 : 6}
         fill={dotColor}
-        stroke={'hsl(var(--primary-foreground))'}
-        strokeWidth={isHighlighted ? 4 : 3}
+        strokeWidth={0}
         className={cn(
           'cursor-pointer drop-shadow-lg',
           'transition-all'
