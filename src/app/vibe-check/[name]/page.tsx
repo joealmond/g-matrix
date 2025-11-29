@@ -3,27 +3,31 @@
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { addDoc, collection, doc, getDoc, setDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-import { Product } from '@/lib/types';
+import { useFirestore, useUser } from '@/firebase';
+import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { FineTunePanel } from '@/components/dashboard/fine-tune-panel';
 
 export default function VibeCheckPage() {
   const params = useParams();
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [showFineTune, setShowFineTune] = useState(false);
+  const [latestVote, setLatestVote] = useState<Vote | null>(null);
+  const fineTuneRef = useRef<HTMLDivElement>(null);
   
   const decodedProductName = decodeURIComponent(params.name as string);
 
   useEffect(() => {
-    // 1. Get image from session storage
     const productDataString = sessionStorage.getItem('identifiedProduct');
     if (productDataString) {
         try {
@@ -36,14 +40,10 @@ export default function VibeCheckPage() {
         }
     }
   
-    // 2. Find or create the product in Firestore
     const findOrCreateProduct = async () => {
         if (!firestore || !decodedProductName) return;
         setIsLoading(true);
 
-        // A simple way to create a consistent ID is to hash the name,
-        // but for simplicity, we'll just use the name as the ID.
-        // This is not robust for names with special characters, but works for this case.
         const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const productRef = doc(firestore, 'products', productId);
         
@@ -53,9 +53,7 @@ export default function VibeCheckPage() {
             if (docSnap.exists()) {
                 setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
             } else {
-                // Product doesn't exist, create it.
-                const newProduct: Product = {
-                    id: productId,
+                const newProduct: Omit<Product, 'id'> = {
                     name: decodedProductName,
                     imageUrl: imageUrl || 'https://placehold.co/600x400',
                     avgSafety: 0,
@@ -65,7 +63,7 @@ export default function VibeCheckPage() {
                 
                 setDoc(productRef, newProduct)
                   .then(() => {
-                    setProduct(newProduct);
+                    setProduct({ id: productId, ...newProduct });
                   })
                   .catch((serverError) => {
                     const permissionError = new FirestorePermissionError({
@@ -86,6 +84,17 @@ export default function VibeCheckPage() {
     findOrCreateProduct();
 
   }, [firestore, decodedProductName, imageUrl]);
+
+  const handleVibeSubmitted = (vote: Vote) => {
+    setLatestVote(vote);
+    setShowFineTune(true);
+  };
+
+  useEffect(() => {
+    if (showFineTune && fineTuneRef.current) {
+      fineTuneRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [showFineTune]);
 
   return (
     <div className="container mx-auto p-4">
@@ -125,10 +134,20 @@ export default function VibeCheckPage() {
                     <CardContent><Skeleton className="h-96 w-full" /></CardContent>
                 </Card>
             ) : (
-                <VotingPanel productName={product.name} productId={product.id} />
+                <VotingPanel 
+                  productName={product.name} 
+                  productId={product.id}
+                  onVibeSubmit={handleVibeSubmitted}
+                />
             )}
         </div>
       </div>
+
+      {showFineTune && product && latestVote && (
+        <div ref={fineTuneRef} className="mt-8 scroll-mt-8">
+          <FineTunePanel product={product} initialVote={latestVote} userId={user?.uid} />
+        </div>
+      )}
     </div>
   );
 }

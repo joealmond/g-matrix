@@ -17,7 +17,7 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, updateDoc, runTransaction } from 'firebase/firestore';
 import type { Vote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -48,6 +48,7 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
   const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
 
 
   const handleSafetyVote = (vote: SafetyVote) => {
@@ -60,15 +61,25 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
   
   const handleSubmit = async () => {
     if (!safetyVote || !tasteVote || !firestore || !productId) return;
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "You must be signed in to vote.",
+      });
+      return;
+    }
+
 
     const vibe: Vote = {
+      userId: user.uid,
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
       createdAt: serverTimestamp(),
     };
 
     const productRef = doc(firestore, 'products', productId);
-    const voteRef = doc(collection(firestore, 'products', productId, 'votes'));
+    const voteRef = doc(collection(firestore, 'products', productId, 'votes'), user.uid); // Use user UID for vote doc ID
 
     runTransaction(firestore, async (transaction) => {
       const productDoc = await transaction.get(productRef);
@@ -105,12 +116,9 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
         }
     })
     .catch((serverError) => {
-        // Since a transaction can fail on multiple operations (set or update),
-        // we create a more general error. A more sophisticated implementation
-        // could try to determine which operation failed.
         const permissionError = new FirestorePermissionError({
           path: productRef.path,
-          operation: 'write', // General write operation for transaction
+          operation: 'write', 
           requestResourceData: { vote: vibe },
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
@@ -151,7 +159,7 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
             <Button
               variant="outline"
               onClick={() => handleSafetyVote('Wrecked')}
-              className={cn("group h-24 flex-col gap-2 transition-all active:scale-95", safetyVote === 'Wrecked' ? 'border-red-500 bg-red-500/10' : 'hover:border-red-500 hover:bg-red-500/10')}
+              className={cn("group h-24 flex-col gap-2 transition-all active-scale-95", safetyVote === 'Wrecked' ? 'border-red-500 bg-red-500/10' : 'hover:border-red-500 hover:bg-red-500/10')}
             >
               <ShieldX className="h-8 w-8 text-red-500" />
               <span className={cn("font-semibold", safetyVote === 'Wrecked' ? 'text-red-400' : 'group-hover:text-red-400')}>
@@ -197,7 +205,7 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-4">
-         <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote} className="w-full">
+         <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote || !user} className="w-full">
           Submit Vibe
         </Button>
          <Button variant="link" className="text-muted-foreground w-full">

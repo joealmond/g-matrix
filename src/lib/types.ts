@@ -10,7 +10,9 @@ export interface Product {
 }
 
 export interface Vote {
+    userId: string;
     safety: number;
     taste: number;
     createdAt: FieldValue;
+    updatedAt?: FieldValue;
 }
