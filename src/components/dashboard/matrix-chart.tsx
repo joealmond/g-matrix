@@ -76,13 +76,14 @@ const CustomDot = (props: any) => {
     highlightedProduct,
   } = props;
   const isHighlighted = highlightedProduct === payload.product;
+  const dotColor = chartColors[index % chartColors.length];
 
   return (
     <Dot
       cx={cx}
       cy={cy}
       r={isHighlighted ? 10 : 6}
-      fill={chartColors[index % chartColors.length]}
+      fill={dotColor}
       stroke={isHighlighted ? 'white' : 'transparent'}
       strokeWidth={isHighlighted ? 3 : 0}
       onMouseDown={onMouseDown}
@@ -142,9 +143,10 @@ export function MatrixChart({
 
     }, []);
 
-  const handlePointerDown = useCallback(() => {
+  const handlePointerDown = useCallback((e: any) => {
     if (!isDraggable || !onVibeChange) return;
     setIsDragging(true);
+    // e.stopPropagation();
   }, [isDraggable, onVibeChange]);
 
 
@@ -341,15 +343,15 @@ export function MatrixChart({
                     <CustomDot
                       {...props}
                       isDraggable={isDraggable}
-                      onMouseDown={(e: any) => handlePointerDown()}
-                      onTouchStart={(e: any) => handlePointerDown()}
+                      onMouseDown={(e: any) => handlePointerDown(e)}
+                      onTouchStart={(e: any) => handlePointerDown(e)}
                       highlightedProduct={highlightedProduct}
                     />
                   )}
                   onClick={(data, index, event) => {
                     if (!isDragging && event) {
                       onPointClick?.(data.product);
-                       event.stopPropagation();
+                      // event.stopPropagation(); // This was causing issues
                     }
                   }}
                 />
