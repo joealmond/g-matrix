@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { handleImageAnalysis } from '@/app/actions';
-import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
+import { useState, useRef, useEffect, useActionState } from 'react';
+import { analyzeAndUploadProduct, initialState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useActionState } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -18,7 +16,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
+  const [state, formAction, isProcessing] = useActionState(analyzeAndUploadProduct, initialState);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -81,7 +79,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         return;
     }
 
-    if (state.productName && state.imageUrl) {
+    if (state.success && state.productName && state.imageUrl) {
         toast({
             title: 'Product Identified!',
             description: `Found: ${state.productName}`,
@@ -171,6 +169,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
   return (
     <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
+      <input type="hidden" name="userId" value="anonymous" />
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">

@@ -1,68 +1,133 @@
 'use server';
-import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
+
+import { adminDb, adminStorage } from '@/lib/firebase-admin';
+import { google } from '@ai-sdk/google';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import type { ImageAnalysisState } from '@/lib/actions-types';
 
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-];
-
-const formSchema = z.object({
-  photo: z
-    .instanceof(File)
-    .refine(file => file.size > 0, 'Please select an image to upload.')
-    .refine(
-      file => file.size <= MAX_FILE_SIZE,
-      `Max image size is 5MB.`
-    )
-    .refine(
-      file => ACCEPTED_IMAGE_TYPES.includes(file.type),
-      'Only .jpg, .jpeg, .png and .webp formats are supported.'
-    ),
+// Define the structure we want Gemini to return
+const AnalysisSchema = z.object({
+  productName: z.string().describe('The specific brand name and product name visible on the packaging'),
+  isLikelyGlutenFree: z.boolean().describe('True if the packaging explicitly says Gluten Free or is naturally gluten free'),
+  riskLevel: z.enum(['Safe', 'Sketchy', 'Unsafe']).describe('Based on ingredients or GF certification logos visible'),
+  tags: z.array(z.string()).describe('Short tags like "Bread", "Snack", "Certified GF"'),
+  reasoning: z.string().describe('Short explanation of why it was classified this way'),
 });
 
-export async function handleImageAnalysis(prevState: any, formData: FormData): Promise<ImageAnalysisState> {
-  const validatedFields = formSchema.safeParse({
-    photo: formData.get('photo'),
-  });
+export type ImageAnalysisState = {
+  productName?: string | null;
+  productId?: string | null;
+  imageUrl?: string | null;
+  error?: string | null;
+  data?: z.infer<typeof AnalysisSchema> | null;
+  success: boolean;
+};
 
-  if (!validatedFields.success) {
-    return {
-      productName: null,
-      imageUrl: null,
-      error: validatedFields.error.flatten().fieldErrors.photo?.[0] ?? 'Invalid image file.',
-    };
-  }
+export const initialState: ImageAnalysisState = {
+  productName: null,
+  productId: null,
+  imageUrl: null,
+  error: null,
+  data: null,
+  success: false,
+};
 
-  const file = validatedFields.data.photo;
-  
-  // Create the data URI regardless of the analysis outcome.
-  const buffer = await file.arrayBuffer();
-  const base64String = Buffer.from(buffer).toString('base64');
-  const photoDataUri = `data:${file.type};base64,${base64String}`;
 
+export async function analyzeAndUploadProduct(prevState: any, formData: FormData): Promise<ImageAnalysisState> {
   try {
-    // Analyze image to get product name
-    console.log("Starting image analysis...");
-    const analysisResult = await extractProductNameFromImage({ photoDataUri });
-    const productName = (analysisResult.productName || "Unnamed Product").trim();
-    console.log(`Image analysis successful. Product: ${productName}`);
-    
-    return { productName, imageUrl: photoDataUri, error: null };
+    const file = formData.get('photo') as File;
+    const userId = 'anonymous'; // Optional tracking
 
-  } catch (error: any) {
-    console.error("AI analysis failed, falling back to manual entry:", JSON.stringify(error, null, 2));
-    // If AI fails, we proceed with the uploaded image and a generic name.
-    // The user will be prompted to enter the name on the next screen.
+    if (!file) {
+      return { success: false, error: 'No image file provided' };
+    }
+     if (file.size === 0) {
+      return { success: false, error: 'Cannot process an empty file.' };
+    }
+
+
+    // --- STEP 1: PREPARE IMAGE FOR AI ---
+    // Convert the file to a Buffer and then Base64
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Image = buffer.toString('base64');
+
+    // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
+    const { object: analysis } = await generateObject({
+      model: google('gemini-1.5-flash'),
+      schema: AnalysisSchema,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this product image for a celiac/gluten-free community app. Identify the product precisely.' },
+            { type: 'image', image: base64Image },
+          ],
+        },
+      ],
+    });
+
+    // --- STEP 3: UPLOAD IMAGE TO FIREBASE STORAGE (ADMIN SDK) ---
+    const bucket = adminStorage.bucket(); 
+    
+    const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+    const fileUpload = bucket.file(fileName);
+
+    await fileUpload.save(buffer, {
+      metadata: { 
+        contentType: file.type,
+      },
+    });
+
+    await fileUpload.makePublic();
+    const publicUrl = fileUpload.publicUrl();
+
+    // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
+    const productId = analysis.productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const productRef = adminDb.collection('products').doc(productId);
+
+    const docSnap = await productRef.get();
+
+    if (!docSnap.exists) {
+      await productRef.set({
+        name: analysis.productName,
+        imageUrl: publicUrl,
+        aiAnalysis: {
+          isGlutenFree: analysis.isLikelyGlutenFree,
+          riskLevel: analysis.riskLevel,
+          reasoning: analysis.reasoning,
+        },
+        tags: analysis.tags,
+        avgSafety: 50,
+        avgTaste: 50,
+        voteCount: 0,
+        createdAt: new Date(),
+        createdBy: userId,
+      });
+    } else {
+      console.log('Product already exists, linking to existing entry.');
+    }
+
     return { 
-      productName: 'Unnamed Product', 
-      imageUrl: photoDataUri, 
-      error: null 
+      success: true, 
+      productId: productId, 
+      productName: analysis.productName,
+      imageUrl: publicUrl,
+      data: analysis 
     };
+
+  } catch (error) {
+    console.error('Server Action Error:', error);
+    // Provide a generic but informative error to the client
+    let errorMessage = 'Failed to process image due to a server error.';
+    if (error instanceof Error) {
+        // More specific error for certain cases if needed
+        if (error.message.includes('deadline')) {
+            errorMessage = 'The analysis took too long to complete. Please try again.';
+        } else if (error.message.includes('format')) {
+            errorMessage = 'The AI could not understand the image. Please try a clearer photo.';
+        }
+    }
+    return { success: false, error: errorMessage };
   }
 }

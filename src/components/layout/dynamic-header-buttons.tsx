@@ -17,23 +17,14 @@ export function DynamicHeaderButtons() {
     setHasMounted(true);
   }, []);
 
-  const handleProductIdentified = (productName: string, imageUrl?: string) => {
-    setDialogOpen(false);
-    const productData = { name: productName, imageUrl: imageUrl || '' };
-    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
-    const url = `/vibe-check/${encodeURIComponent(productName)}`;
-    router.push(url);
-  };
-
   const handleScanClick = () => {
     setDialogOpen(true);
   };
 
   if (!hasMounted) {
     // On the server and during initial client render, render a placeholder
-    // or nothing to prevent hydration mismatch. A div with the same height
-    // can prevent layout shifts.
-    return <div className="w-[150px]" />;
+    // to prevent layout shifts.
+    return <div className="w-[150px] h-10" />;
   }
 
   const isSpecialPage =
@@ -52,7 +43,6 @@ export function DynamicHeaderButtons() {
         <ImageUploadDialog
           open={isDialogOpen}
           onOpenChange={setDialogOpen}
-          onProductIdentified={handleProductIdentified}
         >
           <Button onClick={handleScanClick}>
             <Upload className="mr-2 h-4 w-4" />

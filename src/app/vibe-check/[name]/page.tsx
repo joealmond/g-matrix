@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState, useRef, useTransition } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
@@ -19,12 +19,16 @@ import { toast } from '@/hooks/use-toast';
 export default function VibeCheckPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const firestore = useFirestore();
   const [isPending, startTransition] = useTransition();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  // The image URL now comes from the server action result, passed via query param or session storage
+  const [imageUrl, setImageUrl] = useState(searchParams.get('imageUrl') || null);
+  
   const [showFineTune, setShowFineTune] = useState(false);
   const [latestVote, setLatestVote] = useState<Vote | null>(null);
   const fineTuneRef = useRef<HTMLDivElement>(null);
@@ -32,21 +36,27 @@ export default function VibeCheckPage() {
   const [productName, setProductName] = useState(decodeURIComponent(params.name as string));
   const [manualProductName, setManualProductName] = useState('');
   
-  const isUnnamedProduct = productName === 'Unnamed Product';
+  const isUnnamedProduct = productName === 'Unnamed Product' || !productName;
 
   useEffect(() => {
-    const productDataString = sessionStorage.getItem('identifiedProduct');
-    if (productDataString) {
-        try {
-            const productData = JSON.parse(productDataString);
-            if (productData.name === productName) {
-                setImageUrl(productData.imageUrl);
+    // If the imageUrl is not in the URL, check sessionStorage as a fallback.
+    if (!imageUrl) {
+        const productDataString = sessionStorage.getItem('identifiedProduct');
+        if (productDataString) {
+            try {
+                const productData = JSON.parse(productDataString);
+                // Only use it if the name matches the current page context
+                if (productData.name === productName) {
+                    setImageUrl(productData.imageUrl);
+                }
+            } catch (e) {
+                console.error("Failed to parse product data from sessionStorage", e);
             }
-        } catch (e) {
-            console.error("Failed to parse product data from sessionStorage", e);
         }
     }
-  
+  }, [productName, imageUrl]);
+
+  useEffect(() => {
     const findOrCreateProduct = async () => {
         if (!firestore || !productName || isUnnamedProduct) {
           setIsLoading(false);
@@ -62,31 +72,33 @@ export default function VibeCheckPage() {
             const docSnap = await getDoc(productRef);
 
             if (docSnap.exists()) {
-                setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
+                const fetchedProduct = { id: docSnap.id, ...docSnap.data() } as Product;
+                setProduct(fetchedProduct);
+                // If the fetched product has a better image URL, use it.
+                if (fetchedProduct.imageUrl && !imageUrl) {
+                    setImageUrl(fetchedProduct.imageUrl);
+                }
             } else {
-                const newProduct: Omit<Product, 'id'> = {
+                // This logic might be deprecated if server action always creates the product.
+                // It's here as a fallback.
+                const newProductData: Omit<Product, 'id'> = {
                     name: productName,
                     imageUrl: imageUrl || 'https://placehold.co/600x400',
-                    avgSafety: 0,
-                    avgTaste: 0,
+                    avgSafety: 50,
+                    avgTaste: 50,
                     voteCount: 0,
                 };
                 
-                setDoc(productRef, newProduct)
-                  .then(() => {
-                    setProduct({ id: productId, ...newProduct });
-                  })
-                  .catch((serverError) => {
-                    const permissionError = new FirestorePermissionError({
-                      path: productRef.path,
-                      operation: 'create',
-                      requestResourceData: newProduct
-                    });
-                    errorEmitter.emit('permission-error', permissionError);
-                  });
+                await setDoc(productRef, newProductData);
+                setProduct({ id: productId, ...newProductData });
             }
         } catch(e) {
             console.error("Error finding or creating product: ", e);
+            toast({
+                variant: 'destructive',
+                title: 'Database Error',
+                description: 'Could not fetch or create product data.'
+            })
         } finally {
             setIsLoading(false);
         }
@@ -94,7 +106,7 @@ export default function VibeCheckPage() {
 
     findOrCreateProduct();
 
-  }, [firestore, productName, imageUrl, isUnnamedProduct]);
+  }, [firestore, productName, isUnnamedProduct, imageUrl]);
   
   const handleManualNameSubmit = () => {
     const trimmedName = manualProductName.trim();
@@ -107,16 +119,11 @@ export default function VibeCheckPage() {
       return;
     }
     
-    // Update the product name in the component state
-    setProductName(trimmedName);
-
-    // Also update sessionStorage so a refresh doesn't lose the name
     const productData = { name: trimmedName, imageUrl };
     sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
 
-    // Use router to update URL without a full page reload
     startTransition(() => {
-      router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}`, { scroll: false });
+      router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`, { scroll: false });
     });
   };
 
@@ -143,7 +150,7 @@ export default function VibeCheckPage() {
         <div>
             <Card>
                 <CardHeader>
-                    <CardTitle className='font-headline'>{productName}</CardTitle>
+                    <CardTitle className='font-headline'>{isUnnamedProduct ? 'Unnamed Product' : productName}</CardTitle>
                     <CardDescription>
                       {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
                     </CardDescription>
@@ -168,7 +175,7 @@ export default function VibeCheckPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline">Name This Product</CardTitle>
-                <CardDescription>Enter the product name to continue.</CardDescription>
+                <CardDescription>Our AI couldn't read the name. Please enter it below to continue.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -180,7 +187,7 @@ export default function VibeCheckPage() {
                     placeholder="e.g., Udi's Gluten Free Bread"
                   />
                 </div>
-                <Button onClick={handleManualNameSubmit} disabled={isPending} className="w-full">
+                <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName} className="w-full">
                   {isPending ? 'Saving...' : 'Set Product Name'}
                 </Button>
               </CardContent>

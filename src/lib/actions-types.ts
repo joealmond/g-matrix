@@ -1,20 +1,18 @@
-export type ImageAnalysisSuccessState = {
-  productName: string;
-  imageUrl: string;
-  error: null;
+// This file is now largely superseded by the return type in actions.ts,
+// but we keep it to avoid breaking imports unexpectedly.
+
+export type ImageAnalysisState = {
+  productName?: string | null;
+  productId?: string | null;
+  imageUrl?: string | null;
+  error?: string | null;
+  success: boolean;
 };
-
-export type ImageAnalysisErrorState = {
-  productName: null;
-  imageUrl: null;
-  error: string;
-}
-
-export type ImageAnalysisState = ImageAnalysisSuccessState | ImageAnalysisErrorState;
 
 
 export const initialState: ImageAnalysisState = {
   productName: null,
   imageUrl: null,
   error: null,
+  success: false,
 };

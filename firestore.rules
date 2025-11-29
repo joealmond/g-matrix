@@ -1,166 +1,32 @@
-/**
- * Core Philosophy: This ruleset enforces a security model based on user roles (admin) and data ownership,
- * with a default-deny posture. The primary goal is "Authorization Independence," achieved by denormalizing
- * data needed for security checks to avoid slow and costly `get()` calls in rules.
- *
- * Data Structure:
- * - /products/{productId}: A public catalog of products.
- *   - /votes/{userId}: Subcollection storing one vote per user for a given product.
- *   - /reports/{reportId}: Subcollection for user-submitted reports on a product.
- * - /users/{userId}: Private user profile documents.
- *   - /analytics_events/{eventId}: Subcollection for a user's private analytics data.
- * - /ad_slots/{adSlotId}: A public collection of advertisements.
- * - /roles_admin/{userId}: A lookup collection where the existence of a document signifies admin privileges for that user.
- *
- * Key Security Decisions:
- * - Admin Role Management: A user is considered an admin if a document with their UID exists in the `/roles_admin` collection. This is a simple, secure, and performant way to manage roles.
- * - Public vs. Private Data: Collections like `/products` and `/ad_slots` are publicly readable to allow content display for all users. User-specific data under `/users/{userId}` is strictly private to the owner.
- * - User Listing Disabled: The ability to list all documents in the `/users` collection is explicitly disabled to protect user privacy.
- * - Write Operations: All write operations (`create`, `update`, `delete`) are restricted to either the data owner or an administrator, ensuring no anonymous or unauthorized data modification.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    //-------------------------------------------------------------------------
-    // Helper Functions
-    //-------------------------------------------------------------------------
-
-    /**
-     * Returns true if the user is authenticated.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * Returns true if the authenticated user's UID matches the provided userId.
-     * This is the foundation of the ownership model.
-     * @param userId The UID of the resource owner.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * Returns true if the document being accessed already exists in Firestore.
-     * Crucial for protecting against writes to non-existent documents.
-     */
-    function documentExists() {
-      return resource != null;
-    }
     
-    /**
-     * Combines ownership and existence checks for state-changing operations.
-     * @param userId The UID of the resource owner.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && documentExists();
-    }
-
-    /**
-     * Checks if the requesting user has administrative privileges.
-     * This is determined by the existence of a document in the /roles_admin collection.
-     */
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
-
-    //-------------------------------------------------------------------------
-    // Collection Rules
-    //-------------------------------------------------------------------------
-
-    /**
-     * @description Publicly readable product catalog. Any user can create. Only admins can modify or delete.
-     * @path /products/{productId}
-     * @allow (get, list, create) Any user, signed in or not, can read or create a product.
-     * @deny (update, delete) A non-admin user cannot modify or delete a product.
-     * @principle Public read/create with role-based writes.
-     */
+    // Public Products: Everyone can READ, but only Admin can WRITE directly
     match /products/{productId} {
-      allow get, list, create, update: if true;
-      allow delete: if isAdmin() && documentExists();
+      allow read: if true; 
+      allow write: if get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null; 
+      // Note: Anonymous users don't need 'write' here because 
+      // the Server Action (Admin SDK) does the writing!
     }
 
-    /**
-     * @description A user's vote on a product. The document ID is the user's UID to enforce one vote per user.
-     * @path /products/{productId}/votes/{userId}
-     * @allow (create) A signed-in user can create their own vote document (e.g., /products/prod123/votes/user_abc).
-     * @deny (update) A user cannot update another user's vote (e.g., user_xyz tries to update /products/prod123/votes/user_abc).
-     * @principle Enforces document ownership for writes and ensures relational integrity between the path and document data.
-     */
+    // User Votes: Anonymous users CAN write here
     match /products/{productId}/votes/{voteId} {
-      allow get, list, create, update: if true;
-      allow delete: if isAdmin() && documentExists();
+      allow read: if true;
+      allow create: if request.auth != null; // Anonymous is considered 'auth'
+      allow update, delete: if request.auth.uid == resource.data.userId;
     }
 
-    /**
-     * @description User-submitted reports on products. Any signed-in user can create a report. Only admins can manage them.
-     * @path /products/{productId}/reports/{reportId}
-     * @allow (create) Any signed-in user can submit a report.
-     * @deny (list) A regular user cannot list all reports for a product.
-     * @principle Segregated permissions: allows broad creation but restricts management to privileged roles (admins).
-     */
-    match /products/{productId}/reports/{reportId} {
-      allow get: if isAdmin() || (documentExists() && isOwner(resource.data.userId));
-      allow list: if isAdmin();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && request.resource.data.productId == productId;
-      allow update, delete: if isAdmin() && documentExists();
-    }
-
-    /**
-     * @description User profile documents. A user can create and manage only their own document.
-     * @path /users/{userId}
-     * @allow (create) A new user can create their own user profile document.
-     * @deny (get) A user cannot read another user's profile data.
-     * @principle Restricts access to a user's own data tree, protecting sensitive information like email.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if request.auth.uid == userId;
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isOwner(userId) && documentExists() && request.resource.data.id == resource.data.id;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
       allow delete: if false;
     }
 
-    /**
-     * @description Private analytics events for a user. A user can only create events; they cannot be read or modified.
-     * @path /users/{userId}/analytics_events/{eventId}
-     * @allow (create) A user can log an analytics event for their own account.
-     * @deny (get, list, update, delete) All other operations are forbidden to prevent tampering with analytics data.
-     * @principle Write-only access pattern for data integrity.
-     */
-    match /users/{userId}/analytics_events/{eventId} {
-      allow get, list: if false;
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update, delete: if false;
-    }
-
-    /**
-     * @description Publicly readable ad slot information. Only administrators can manage ad content.
-     * @path /ad_slots/{adSlotId}
-     * @allow (list) Any user, signed in or not, can read the list of ads.
-     * @deny (update) A non-admin user cannot change an advertisement.
-     * @principle Public read with role-based writes.
-     */
-    match /ad_slots/{adSlotId} {
-      allow get, list: if true;
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && documentExists();
-    }
-
-    /**
-     * @description Admin role collection. The existence of a document here grants a user admin rights.
-     * @path /roles_admin/{userId}
-     * @allow (get) An admin can check if another user is an admin.
-     * @deny (list) A non-admin cannot list all administrators.
-     * @principle Access to this collection is restricted to existing administrators to prevent privilege escalation.
-     */
     match /roles_admin/{userId} {
-      allow get, list: if isAdmin();
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() && documentExists();
+        allow read, write: if get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null;
     }
-
   }
 }

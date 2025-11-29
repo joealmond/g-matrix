@@ -1,8 +1,7 @@
 'use client';
 
 import { useRef, useActionState, useEffect, useState } from 'react';
-import { handleImageAnalysis } from '@/app/actions';
-import { initialState } from '@/lib/actions-types';
+import { analyzeAndUploadProduct, initialState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +18,7 @@ type ImageUploadFormProps = {
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
+  const [state, formAction, isProcessing] = useActionState(analyzeAndUploadProduct, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,16 +30,14 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     if (state.error) {
       toast({
         variant: "destructive",
-        title: "Action Error",
+        title: "Analysis Error",
         description: state.error,
       });
-      // Reset the form state on error so the user can try again
-      formRef.current?.reset();
-      setPreview(null);
+      // Do not reset the form state so the user can see the error
       return;
     }
 
-    if (state.productName && state.imageUrl) {
+    if (state.success && state.productName && state.imageUrl) {
       toast({
         title: 'Product Ready!',
         description: `Found: ${state.productName}`,
@@ -49,8 +46,8 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
       if (onProductIdentified) {
         onProductIdentified(state.productName, state.imageUrl);
       } else {
-        const url = `/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
-        router.push(url);
+         const url = `/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
+         router.push(url);
       }
     }
   }, [state, isProcessing, onProductIdentified, router, toast]);
@@ -141,7 +138,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
       {preview && (
         <div className="relative h-48 w-full overflow-hidden rounded-md border">
-          <Image src={preview} alt="Image preview" fill style={{ objectFit: 'contain' }} />
+          <img src={preview} alt="Image preview" className="object-contain w-full h-full" />
         </div>
       )}
 

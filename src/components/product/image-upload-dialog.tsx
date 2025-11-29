@@ -12,16 +12,31 @@ import { ImageUploadForm } from './image-upload-form';
 import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CameraCapture } from './camera-capture';
+import { useRouter } from 'next/navigation';
 
 type ImageUploadDialogProps = {
   children: ReactNode;
-  onProductIdentified?: (productName: string, imageUrl: string) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
 
-export function ImageUploadDialog({ children, onProductIdentified, open, onOpenChange }: ImageUploadDialogProps) {
+export function ImageUploadDialog({ children, open, onOpenChange }: ImageUploadDialogProps) {
+  const router = useRouter();
+
+  const handleProductIdentified = (productName: string, imageUrl: string) => {
+    // Close the dialog
+    onOpenChange?.(false);
+    
+    // Store in session storage as a fallback
+    const productData = { name: productName, imageUrl: imageUrl || '' };
+    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+
+    // Navigate to the vibe check page with the product name and image URL
+    const url = `/vibe-check/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`;
+    router.push(url);
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -39,10 +54,10 @@ export function ImageUploadDialog({ children, onProductIdentified, open, onOpenC
             <TabsTrigger value="camera">Use Camera</TabsTrigger>
           </TabsList>
           <TabsContent value="upload" className="pt-4">
-            <ImageUploadForm onProductIdentified={onProductIdentified} />
+            <ImageUploadForm onProductIdentified={handleProductIdentified} />
           </TabsContent>
           <TabsContent value="camera" className="pt-4">
-            <CameraCapture onProductIdentified={onProductIdentified} />
+            <CameraCapture onProductIdentified={handleProductIdentified} />
           </TabsContent>
         </Tabs>
       </DialogContent>
