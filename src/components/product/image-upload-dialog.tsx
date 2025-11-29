@@ -15,7 +15,7 @@ import { CameraCapture } from './camera-capture';
 
 type ImageUploadDialogProps = {
   children: ReactNode;
-  onProductIdentified?: (productName: string, imageUrl?: string) => void;
+  onProductIdentified?: (productName: string, imageUrl: string) => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
@@ -39,10 +39,10 @@ export function ImageUploadDialog({ children, onProductIdentified, open, onOpenC
             <TabsTrigger value="camera">Use Camera</TabsTrigger>
           </TabsList>
           <TabsContent value="upload" className="pt-4">
-            <ImageUploadForm onProductIdentified={onProductIdentified as (productName: string) => void} />
+            <ImageUploadForm onProductIdentified={onProductIdentified} />
           </TabsContent>
           <TabsContent value="camera" className="pt-4">
-            <CameraCapture onProductIdentified={onProductIdentified as (productName: string) => void} />
+            <CameraCapture onProductIdentified={onProductIdentified} />
           </TabsContent>
         </Tabs>
       </DialogContent>
