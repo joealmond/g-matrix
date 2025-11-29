@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
-import { handleImageAnalysis } from '@/app/actions';
+import { useState, useRef, useEffect } from 'react';
+import { handleImageAnalysis, type ImageAnalysisState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -9,23 +9,32 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useActionState } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
+};
+
+const initialState: ImageAnalysisState = {
+  productName: null,
+  error: null,
 };
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { app } = useFirebase();
   const { toast } = useToast();
-  
-  const [isProcessing, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+
+  const [state, formAction, isProcessing] = useActionState(
+    handleImageAnalysis,
+    initialState
+  );
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  
+  const [isUploading, setIsUploading] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -69,6 +78,43 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
+  useEffect(() => {
+    const uploadAndRedirect = async () => {
+      if (state.productName && capturedFile && app) {
+        setIsUploading(true);
+        try {
+          const storage = getStorage(app);
+          const storageRef = ref(
+            storage,
+            `products/${state.productName}-${Date.now()}`
+          );
+          const snapshot = await uploadBytes(storageRef, capturedFile, {
+            contentType: capturedFile.type,
+          });
+          const imageUrl = await getDownloadURL(snapshot.ref);
+
+          if (onProductIdentified) {
+            onProductIdentified(state.productName, imageUrl);
+          } else {
+            router.push(
+              `/product/${encodeURIComponent(
+                state.productName
+              )}?imageUrl=${encodeURIComponent(imageUrl)}`
+            );
+          }
+        } catch (e: any) {
+          console.error('Image upload failed:', e);
+           toast({
+            variant: 'destructive',
+            title: 'Upload Failed',
+            description: e.message || 'Could not upload the product image.',
+          });
+          setIsUploading(false);
+        }
+      }
+    };
+    uploadAndRedirect();
+  }, [state.productName, capturedFile, app, onProductIdentified, router, toast]);
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -76,9 +122,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     if (video && canvas) {
       if (video.videoWidth === 0 || video.videoHeight === 0) {
         toast({
-            variant: 'destructive',
-            title: 'Capture Failed',
-            description: 'Could not capture image. Please try again.',
+          variant: 'destructive',
+          title: 'Capture Failed',
+          description: 'Could not capture image. Please try again.',
         });
         return;
       }
@@ -98,52 +144,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const handleRetake = () => {
     setCapturedImage(null);
     setCapturedFile(null);
-    setError(null);
-  };
-
-  const handleSubmit = async () => {
-    if (!capturedFile || !app) {
-      setError('No file captured or Firebase app not available.');
-      return;
-    }
-    setError(null);
-
-    startTransition(async () => {
-      try {
-        // 1. Analyze image to get product name
-        const formData = new FormData();
-        formData.append('photo', capturedFile);
-        const analysisResult = await handleImageAnalysis(null, formData);
-
-        if (analysisResult.error) {
-          setError(analysisResult.error);
-          return;
-        }
-
-        const productName = analysisResult.productName;
-        if (!productName) {
-          setError('Could not identify the product from the image.');
-          return;
-        }
-        
-        // 2. Upload image to Firebase Storage
-        const storage = getStorage(app);
-        const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
-        const snapshot = await uploadBytes(storageRef, capturedFile, { contentType: capturedFile.type });
-        const imageUrl = await getDownloadURL(snapshot.ref);
-
-        // 3. Redirect or call callback
-        if (onProductIdentified) {
-            onProductIdentified(productName, imageUrl);
-        } else {
-            router.push(`/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-        }
-      } catch (e: any) {
-        console.error("Image analysis or upload failed:", e);
-        const errorMessage = e.message || 'An unexpected error occurred.';
-        setError(`Processing failed: ${errorMessage}`);
-      }
-    });
   };
 
   const dataURLtoFile = (dataurl: string, filename: string) => {
@@ -160,26 +160,35 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     }
     return new File([u8arr], filename, { type: mime });
   };
-
-  if (hasCameraPermission === null) {
-     return <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>
-  }
   
+  if (hasCameraPermission === null) {
+    return <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
+
   if (hasCameraPermission === false) {
     return (
-        <Alert variant="destructive">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Camera Access Required</AlertTitle>
-            <AlertDescription>
-                Please allow camera access to use this feature. You may need to
-                refresh the page after granting permissions.
-            </AlertDescription>
-        </Alert>
+      <Alert variant="destructive">
+        <Terminal className="h-4 w-4" />
+        <AlertTitle>Camera Access Required</AlertTitle>
+        <AlertDescription>
+          Please allow camera access to use this feature. You may need to
+          refresh the page after granting permissions.
+        </AlertDescription>
+      </Alert>
     );
   }
 
+  const processing = isProcessing || isUploading;
+  const buttonText = isProcessing
+    ? 'Analyzing...'
+    : isUploading
+    ? 'Uploading...'
+    : 'Analyze Captured Image';
+
   return (
-    <div className="space-y-4">
+    <form action={formAction} className="space-y-4">
+      {/* Hidden input to hold the file for the form action */}
+      {capturedFile && <input type="file" name="photo" defaultValue={undefined} style={{ display: 'none' }} files={new DataTransfer().files} />}
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -190,8 +199,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
               muted
               playsInline
             />
+             <canvas ref={canvasRef} className="hidden" />
           </div>
-          <Button onClick={handleCapture} className="w-full">
+          <Button onClick={handleCapture} className="w-full" type="button">
             <Camera className="mr-2 h-4 w-4" />
             Capture Photo
           </Button>
@@ -201,28 +211,41 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
-            <canvas ref={canvasRef} className="hidden" />
           </div>
+          {capturedFile && (
+             <input
+              type="file"
+              name="photo"
+              ref={input => {
+                if (input) {
+                  const dataTransfer = new DataTransfer();
+                  dataTransfer.items.add(capturedFile);
+                  input.files = dataTransfer.files;
+                }
+              }}
+              style={{ display: 'none' }}
+            />
+          )}
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleRetake} type="button">
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-             <Button onClick={handleSubmit} disabled={isProcessing} className="w-full">
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Analyze Captured Image
-             </Button>
+            <Button type="submit" disabled={processing} className="w-full">
+              {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {buttonText}
+            </Button>
           </div>
         </div>
       )}
-      
-      {error && (
+
+      {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
-    </div>
+    </form>
   );
 }
