@@ -56,37 +56,31 @@ export async function handleImageUpload(prevState: any, formData: FormData) {
     const photoDataUri = `data:${file.type};base64,${base64String}`;
 
     const result = await extractProductNameFromImage({ photoDataUri });
-    const productName = result.productName;
+    const productName = result.productName || "Unnamed Product";
 
-    if (productName) {
-      const productDocRef = doc(db, 'products', productName);
-      const productDoc = await getDoc(productDocRef);
+    const productDocRef = doc(db, 'products', productName);
+    const productDoc = await getDoc(productDocRef);
 
-      if (!productDoc.exists()) {
-        const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
-        await uploadBytes(storageRef, file);
-        const imageUrl = await getDownloadURL(storageRef);
+    if (!productDoc.exists()) {
+      const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
+      await uploadBytes(storageRef, file);
+      const imageUrl = await getDownloadURL(storageRef);
 
-        await setDoc(productDocRef, {
-          id: productName,
-          name: productName,
-          imageUrl: imageUrl,
-          avgSafety: 50,
-          avgTaste: 50,
-          voteCount: 0,
-        });
-      }
-      
-      revalidatePath('/');
-      revalidatePath(`/product/${encodeURIComponent(productName)}`);
-
-      return { productName: result.productName, error: null };
-    } else {
-      return {
-        productName: null,
-        error: 'Could not identify the product from the image.',
-      };
+      await setDoc(productDocRef, {
+        id: productName,
+        name: productName,
+        imageUrl: imageUrl,
+        avgSafety: 50,
+        avgTaste: 50,
+        voteCount: 0,
+      });
     }
+    
+    revalidatePath('/');
+    revalidatePath(`/product/${encodeURIComponent(productName)}`);
+
+    return { productName: productName, error: null };
+
   } catch (error) {
     console.error(error);
     return {
