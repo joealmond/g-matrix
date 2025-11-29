@@ -10,12 +10,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Product, Vote } from '@/lib/types';
 import { ProductVibeChart } from './product-vibe-chart';
 import { DraggableDot } from './draggable-dot';
-import { doc, runTransaction, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { debounce } from 'lodash';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 
 interface FineTunePanelProps {
@@ -74,21 +74,18 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
       });
 
     } catch (e: any) {
-        console.error("Fine-tune update failed:", e);
         const permissionError = new FirestorePermissionError({
             path: voteRef.path,
-            operation: 'update',
-            requestResourceData: newVibe
-        });
+            operation: 'write',
+            requestResourceData: {
+              productUpdate: { avgSafety: '...', avgTaste: '...' },
+              voteUpdate: newVibe
+            }
+        } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-            variant: "destructive",
-            title: "Update Failed",
-            description: e.message || "Could not update your vibe."
-        });
     }
 
-  }, [firestore, userId, product.id, initialVote.safety, initialVote.taste, initialVote.createdAt, toast]);
+  }, [firestore, userId, product.id, initialVote.safety, initialVote.taste, initialVote.createdAt]);
 
   const debouncedUpdate = useMemo(() => debounce(updateVoteInFirestore, 500), [updateVoteInFirestore]);
   
