@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState } from 'react';
-import { analyzeAndUploadProduct, initialState } from '@/app/actions';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -16,15 +15,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [state, formAction, isProcessing] = useActionState(analyzeAndUploadProduct, initialState);
-
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const isProcessing = false; // Feature is disabled
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -67,33 +63,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-   useEffect(() => {
-    if (isProcessing) return; 
-
-    if (state.error) {
-        toast({
-            variant: "destructive",
-            title: "Analysis Error",
-            description: state.error,
-        });
-        return;
-    }
-
-    if (state.success && state.productName && state.imageUrl) {
-        toast({
-            title: 'Product Identified!',
-            description: `Found: ${state.productName}`,
-        });
-
-        if (onProductIdentified) {
-            onProductIdentified(state.productName, state.imageUrl);
-        } else {
-            const url = `/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
-            router.push(url);
-        }
-    }
-  }, [state, isProcessing, onProductIdentified, router, toast]);
-
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -114,34 +83,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
         const dataUri = canvas.toDataURL('image/png');
         setCapturedImage(dataUri);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], "capture.png", { type: "image/png" });
-            setCapturedFile(file);
-          }
-        }, 'image/png');
       }
     }
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
-    setCapturedFile(null);
-  };
-  
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!capturedFile) {
-      toast({
-        variant: 'destructive',
-        title: 'No Image',
-        description: 'Please capture an image first.',
-      });
-      return;
-    }
-    const formData = new FormData(e.currentTarget);
-    formData.set('photo', capturedFile);
-    formAction(formData);
   };
 
   if (hasCameraPermission === null) {
@@ -165,11 +112,18 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
   
-  const buttonText = isProcessing ? 'Processing...' : 'Analyze Captured Image';
+  const buttonText = 'Analyze Captured Image';
 
   return (
-    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
-      <input type="hidden" name="userId" value="anonymous" />
+    <form className="space-y-4">
+        <Alert variant="destructive">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Feature Disabled</AlertTitle>
+            <AlertDescription>
+                Image analysis is temporarily disabled due to a server configuration issue.
+            </AlertDescription>
+        </Alert>
+
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -194,11 +148,11 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             <img src={capturedImage} alt="Captured" className="w-full" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={handleRetake} type="button" disabled={isProcessing}>
+            <Button variant="outline" onClick={handleRetake} type="button" disabled={true}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-            <Button type="submit" disabled={isProcessing || !capturedFile} className="w-full">
+            <Button type="submit" disabled={true} className="w-full">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>

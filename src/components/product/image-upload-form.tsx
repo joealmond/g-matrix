@@ -1,56 +1,26 @@
 'use client';
 
-import { useRef, useActionState, useEffect, useState } from 'react';
-import { analyzeAndUploadProduct, initialState } from '@/app/actions';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud } from 'lucide-react';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Terminal } from 'lucide-react';
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
 };
 
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
-  const router = useRouter();
   const { toast } = useToast();
-  const [state, formAction, isProcessing] = useActionState(analyzeAndUploadProduct, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-
-  useEffect(() => {
-    if (isProcessing) return;
-
-    if (state.error) {
-      toast({
-        variant: "destructive",
-        title: "Analysis Error",
-        description: state.error,
-      });
-      // Do not reset the form state so the user can see the error
-      return;
-    }
-
-    if (state.success && state.productName && state.imageUrl) {
-      toast({
-        title: 'Product Ready!',
-        description: `Found: ${state.productName}`,
-      });
-
-      if (onProductIdentified) {
-        onProductIdentified(state.productName, state.imageUrl);
-      } else {
-         const url = `/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
-         router.push(url);
-      }
-    }
-  }, [state, isProcessing, onProductIdentified, router, toast]);
+  const isProcessing = false; // Feature is disabled
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -98,10 +68,18 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     handleFile(file);
   };
   
-  const buttonText = isProcessing ? 'Processing...' : 'Analyze Image';
+  const buttonText = 'Analyze Image';
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form ref={formRef} className="space-y-4">
+        <Alert variant="destructive">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Feature Disabled</AlertTitle>
+            <AlertDescription>
+                Image analysis is temporarily disabled due to a server configuration issue.
+            </AlertDescription>
+        </Alert>
+
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
@@ -131,7 +109,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             ref={fileInputRef}
             className="sr-only"
             required
-            disabled={isProcessing}
+            disabled={true}
           />
         </div>
       </div>
@@ -142,7 +120,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={isProcessing || !preview} className="w-full">
+      <Button type="submit" disabled={true} className="w-full">
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {buttonText}
       </Button>
