@@ -15,15 +15,18 @@ import { DraggableDot } from '@/components/dashboard/draggable-dot';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
 import { useDoc } from '@/firebase';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, setDoc, collection, getDoc } from 'firebase/firestore';
 import type { Product, Vote } from '@/lib/types';
+import { useSearchParams } from 'next/navigation';
 
 export default function ProductPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const firestore = useFirestore();
   
   const initialProductName = decodeURIComponent(params.name as string);
+  const imageUrl = searchParams.get('imageUrl');
 
   const productDocRef = useMemo(() => {
     if (!firestore || !initialProductName) return null;
@@ -42,16 +45,44 @@ export default function ProductPage() {
   
   const chartRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (product) {
-      const initialVibe = { safety: product.avgSafety, taste: product.avgTaste };
-       if (!vibe) { // Only set initial vibe if it hasn't been set by voting
-         setVibe(initialVibe);
-         setOriginalVibe(initialVibe);
-         setShowChart(true);
-       }
-    }
-  }, [product, vibe]);
+   useEffect(() => {
+    if (loading || !firestore) return;
+
+    const checkAndCreateProduct = async () => {
+      if (!product && productDocRef) {
+        // Product doesn't exist, create it.
+        try {
+          const newProductData = {
+            id: initialProductName,
+            name: initialProductName,
+            imageUrl: imageUrl || `https://picsum.photos/seed/${initialProductName}/400/400`,
+            avgSafety: 50,
+            avgTaste: 50,
+            voteCount: 0,
+          };
+          await setDoc(productDocRef, newProductData);
+          // The useDoc hook will automatically update with the new data
+        } catch (error) {
+          console.error("Error creating product:", error);
+          toast({
+            variant: "destructive",
+            title: "Uh oh!",
+            description: "Could not create the new product.",
+          });
+        }
+      } else if (product) {
+         const initialVibe = { safety: product.avgSafety, taste: product.avgTaste };
+         if (!vibe) {
+           setVibe(initialVibe);
+           setOriginalVibe(initialVibe);
+           setShowChart(true);
+         }
+      }
+    };
+
+    checkAndCreateProduct();
+  }, [product, loading, firestore, initialProductName, imageUrl, productDocRef, toast, vibe]);
+
 
   const isChanged = originalVibe && vibe && (
     productName !== originalProductName ||
@@ -69,7 +100,7 @@ export default function ProductPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!firestore || !vibe || !product) return;
+    if (!firestore || !vibe || !product || !productDocRef) return;
 
     try {
       const voteRef = doc(collection(firestore, 'products', product.id, 'votes'));
@@ -79,8 +110,6 @@ export default function ProductPage() {
         createdAt: serverTimestamp(),
       });
       
-      // In a real app, you would have a cloud function to recalculate the average
-      // For now, we simulate an update.
       const newVoteCount = (product.voteCount || 0) + 1;
       const newAvgSafety = ((product.avgSafety * (product.voteCount || 0)) + vibe.safety) / newVoteCount;
       const newAvgTaste = ((product.avgTaste * (product.voteCount || 0)) + vibe.taste) / newVoteCount;
@@ -123,15 +152,16 @@ export default function ProductPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Loading Product...</p>
       </div>
     );
   }
 
   if (!product) {
      return (
-      <div className="text-center">
-        <h1 className="font-headline text-3xl">Product not found</h1>
-        <p className="text-muted-foreground">This product doesn't seem to exist in our database yet.</p>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Creating new product...</p>
       </div>
     );
   }

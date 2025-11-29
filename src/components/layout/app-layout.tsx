@@ -176,9 +176,10 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isDialogOpen, setDialogOpen] = useState(false);
 
-  const handleProductIdentified = (productName: string) => {
+  const handleProductIdentified = (productName: string, imageUrl?: string) => {
     setDialogOpen(false);
-    router.push(`/product/${encodeURIComponent(productName)}`);
+    const url = `/product/${encodeURIComponent(productName)}${imageUrl ? `?imageUrl=${encodeURIComponent(imageUrl)}` : ''}`;
+    router.push(url);
   }
 
   const isProductPage = pathname.startsWith('/product/');

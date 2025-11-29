@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useRef, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
-import { handleImageUpload } from '@/app/actions';
+import { handleImageUpload, type ImageUploadState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,8 +11,10 @@ import { Loader2, Terminal, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-const initialState = {
+
+const initialState: ImageUploadState = {
   productName: null,
+  imageUrl: null,
   error: null,
 };
 
@@ -38,12 +40,10 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
-      // Simulate a change event for react-hook-form
       if (fileInputRef.current) {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInputRef.current.files = dataTransfer.files;
-        // Manually trigger change event for the form state
         fileInputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
       }
       
@@ -89,6 +89,8 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   useEffect(() => {
     if (state.productName && onProductIdentified) {
+      // The server action now returns the name.
+      // The parent component will handle the redirection.
       onProductIdentified(state.productName);
     }
   }, [state.productName, onProductIdentified]);

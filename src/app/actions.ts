@@ -7,10 +7,8 @@ import {
   uploadBytes,
   getDownloadURL,
 } from 'firebase/storage';
-import { getFirestore, doc, getDoc, setDoc, collection } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
@@ -34,7 +32,31 @@ const formSchema = z.object({
     ),
 });
 
-export async function handleImageUpload(prevState: any, formData: FormData) {
+// This is the new success state type
+export type ImageUploadSuccessState = {
+  productName: string;
+  imageUrl: string;
+  error: null;
+};
+
+// This is the error state type
+export type ImageUploadErrorState = {
+  productName: null;
+  imageUrl: null;
+  error: string;
+}
+
+export type ImageUploadState = ImageUploadSuccessState | ImageUploadErrorState;
+
+
+const initialState: ImageUploadState = {
+  productName: null,
+  imageUrl: null,
+  error: null,
+};
+
+
+export async function handleImageUpload(prevState: any, formData: FormData): Promise<ImageUploadState> {
   const validatedFields = formSchema.safeParse({
     photo: formData.get('photo'),
   });
@@ -42,15 +64,19 @@ export async function handleImageUpload(prevState: any, formData: FormData) {
   if (!validatedFields.success) {
     return {
       productName: null,
-      error: validatedFields.error.flatten().fieldErrors.photo?.[0]
+      imageUrl: null,
+      error: validatedFields.error.flatten().fieldErrors.photo?.[0] || 'Invalid file.',
     };
   }
 
   const file = validatedFields.data.photo;
-  const { db, app } = initializeFirebase();
+  // We only initialize Firebase here to get the Storage instance.
+  // No database operations will be performed on the server.
+  const { app } = initializeFirebase();
   const storage = getStorage(app);
   
   try {
+    // 1. Analyze the image with AI
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
     const photoDataUri = `data:${file.type};base64,${base64String}`;
@@ -58,35 +84,21 @@ export async function handleImageUpload(prevState: any, formData: FormData) {
     const result = await extractProductNameFromImage({ photoDataUri });
     const productName = result.productName || "Unnamed Product";
 
-    const productDocRef = doc(db, 'products', productName);
-    const productDoc = await getDoc(productDocRef);
+    // 2. Upload the image to Firebase Storage
+    const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
+    await uploadBytes(storageRef, file);
+    const imageUrl = await getDownloadURL(storageRef);
 
-    if (!productDoc.exists()) {
-      const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
-      await uploadBytes(storageRef, file);
-      const imageUrl = await getDownloadURL(storageRef);
-
-      await setDoc(productDocRef, {
-        id: productName,
-        name: productName,
-        imageUrl: imageUrl,
-        avgSafety: 50,
-        avgTaste: 50,
-        voteCount: 0,
-      });
-    }
-    
-    revalidatePath('/');
-    revalidatePath(`/product/${encodeURIComponent(productName)}`);
-
-    return { productName: productName, error: null };
+    // 3. Return the product name and image URL to the client
+    return { productName: productName, imageUrl: imageUrl, error: null };
 
   } catch (error: any) {
-    console.error("Image analysis failed:", JSON.stringify(error, null, 2));
-    const errorMessage = error.message || 'An unexpected error occurred during image analysis.';
+    console.error("Image analysis or upload failed:", JSON.stringify(error, null, 2));
+    const errorMessage = error.message || 'An unexpected error occurred.';
     return {
       productName: null,
-      error: `Image analysis failed: ${errorMessage}`,
+      imageUrl: null,
+      error: `Analysis/Upload failed: ${errorMessage}`,
     };
   }
 }

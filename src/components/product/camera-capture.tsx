@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { handleImageUpload } from '@/app/actions';
+import { handleImageUpload, type ImageUploadState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -11,6 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string) => void;
 };
+
+const initialState: ImageUploadState = {
+  productName: null,
+  imageUrl: null,
+  error: null,
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -23,10 +29,7 @@ function SubmitButton() {
 }
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
-  const [state, formAction] = useActionState(handleImageUpload, {
-    productName: null,
-    error: null,
-  });
+  const [state, formAction] = useActionState(handleImageUpload, initialState);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -69,7 +72,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     getCameraPermission();
 
     return () => {
-      // Cleanup: stop the stream when component unmounts or dialog closes
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -86,9 +88,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (video && canvas) {
-      // Ensure video has dimensions before capturing
       if (video.videoWidth === 0 || video.videoHeight === 0) {
-        console.error("Video dimensions are not available yet.");
         toast({
             variant: 'destructive',
             title: 'Capture Failed',
