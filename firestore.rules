@@ -78,8 +78,8 @@ service cloud.firestore {
      * @principle Public read/create with role-based writes.
      */
     match /products/{productId} {
-      allow get, list, create: if true;
-      allow update, delete: if isAdmin() && documentExists();
+      allow get, list, create, update: if true;
+      allow delete: if isAdmin() && documentExists();
     }
 
     /**
@@ -91,7 +91,7 @@ service cloud.firestore {
      */
     match /products/{productId}/votes/{voteId} {
       allow get, list, create: if true;
-      allow update, delete: if documentExists();
+      allow update, delete: if isAdmin() && documentExists();
     }
 
     /**
