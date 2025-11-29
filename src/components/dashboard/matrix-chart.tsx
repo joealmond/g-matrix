@@ -116,7 +116,7 @@ export function MatrixChart({
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       
-      const chart = chartRef.current.getInternalAPI();
+      const chart = chartRef.current.chart;
       if (!chart) return null;
 
       const xAxisMap = chart.xAxisMap[0];
