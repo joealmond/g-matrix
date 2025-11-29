@@ -74,7 +74,7 @@ const CustomDot = (props: any) => {
       cy={cy}
       r={isHighlighted ? 10 : 6}
       fill={props.fill}
-      stroke={isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--card))'}
+      stroke={isHighlighted ? 'hsl(var(--card))' : 'hsl(var(--card))'}
       strokeWidth={2}
       onClick={() => onPointClick?.(payload.product)}
       className="cursor-pointer transition-all"
