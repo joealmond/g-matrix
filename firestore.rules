@@ -71,15 +71,14 @@ service cloud.firestore {
     //-------------------------------------------------------------------------
 
     /**
-     * @description Publicly readable product catalog. Only administrators can create, modify, or delete products.
+     * @description Publicly readable product catalog. Any user can create. Only admins can modify or delete.
      * @path /products/{productId}
-     * @allow (get) Any user, signed in or not, can read a product document.
-     * @deny (create) A non-admin user cannot create a new product.
-     * @principle Public read with role-based writes.
+     * @allow (get, list, create) Any user, signed in or not, can read or create a product.
+     * @deny (update, delete) A non-admin user cannot modify or delete a product.
+     * @principle Public read/create with role-based writes.
      */
     match /products/{productId} {
-      allow get, list: if true;
-      allow create: if isAdmin();
+      allow get, list, create: if true;
       allow update, delete: if isAdmin() && documentExists();
     }
 
@@ -90,11 +89,9 @@ service cloud.firestore {
      * @deny (update) A user cannot update another user's vote (e.g., user_xyz tries to update /products/prod123/votes/user_abc).
      * @principle Enforces document ownership for writes and ensures relational integrity between the path and document data.
      */
-    match /products/{productId}/votes/{userId} {
-      allow get, list: if true;
-      allow create: if isOwner(userId) && request.resource.data.userId == userId && request.resource.data.productId == productId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId && request.resource.data.productId == resource.data.productId;
-      allow delete: if isExistingOwner(userId);
+    match /products/{productId}/votes/{voteId} {
+      allow get, list, create: if true;
+      allow update, delete: if isExistingOwner(resource.data.userId);
     }
 
     /**
