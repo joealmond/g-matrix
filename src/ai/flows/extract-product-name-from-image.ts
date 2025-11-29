@@ -38,13 +38,9 @@ const prompt = ai.definePrompt({
   name: 'extractProductNameFromImagePrompt',
   input: {schema: ExtractProductNameFromImageInputSchema},
   output: {schema: ExtractProductNameFromImageOutputSchema},
-  prompt: [
-    {
-      text: `You are an AI assistant designed to extract the name of a product from an image.
-  Analyze the following image and extract the product name. Only return the product name.`,
-    },
-    {media: {url: '{{photoDataUri}}'}},
-  ],
+  prompt: `You are an AI assistant designed to extract the name of a product from an image.
+Analyze the following image and extract the product name. Only return the product name.
+Photo: {{media url=photoDataUri}}`,
 });
 
 const extractProductNameFromImageFlow = ai.defineFlow(
