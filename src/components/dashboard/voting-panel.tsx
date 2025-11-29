@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
-// Using inline SVGs for 🔥, 😐, 🧊 to match the prompt's aesthetic
+
 const FireIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M14.5 9.5c0 .938-.443 1.75-1.125 2.25-.682.5-1.125 1.5-1.125 2.25M12 7.5c0 1.5-1 3-2 3s-2-1.5-2-3c0-1.5 1-3 2-3s2 1.5 2 3z"/><path d="M10.5 15.5c-1.5-1-2.5-2.5-2.5-4.5 0-2.5 2-5 5-5s5 2.5 5 5c0 2-1 3.5-2.5 4.5"/><path d="M12.5 18.5c-1.294-.97-2-2.36-2-3.5h-1c0 1.5.706 2.53 2 3.5s2 1.5 2 2.5c0 .5-.5 1-1 1s-1-.5-1-1c0-.5.5-1 1-1h1c0 1.105-1.119 2-2.5 2S9.5 21.605 9.5 20.5s1.119-2 2.5-2 2.5.895 2.5 2z"/></svg>;
 const MehIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><circle cx="12" cy="12" r="10" /><line x1="8" x2="16" y1="15" y2="15" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></svg>;
 const IceIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive"><path d="M12 2v2.4l-3.3 3.3-2.4 2.4-3.6 3.6L2.7 20l6.1-6.1 3.6-3.6 2.4-2.4L18 4.4V2"/><path d="m21.3 11.4-3.6 3.6-2.4 2.4-3.3 3.3V22h2.4l3.3-3.3 2.4-2.4 3.6-3.6Z"/><path d="M18 4.4 12 10.5l-3.6 3.6L2.7 20"/><path d="m11.4 2.7 6.1 6.1 3.6 3.6L22 18l-6.1-6.1-3.6-3.6L8.4 4.4Z"/></svg>;
@@ -26,9 +27,11 @@ const IceIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none
 type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked' | null;
 type TasteVote = 'Yass' | 'Meh' | 'Pass' | null;
 
-export function VotingPanel() {
+export function VotingPanel({ productName }: { productName: string }) {
   const [safetyVote, setSafetyVote] = useState<SafetyVote>(null);
   const [tasteVote, setTasteVote] = useState<TasteVote>(null);
+  const { toast } = useToast();
+
 
   const handleSafetyVote = (vote: SafetyVote) => {
     setSafetyVote(current => (current === vote ? null : vote));
@@ -37,13 +40,31 @@ export function VotingPanel() {
   const handleTasteVote = (vote: TasteVote) => {
     setTasteVote(current => (current === vote ? null : vote));
   };
+  
+  const handleSubmit = () => {
+    // This is where you would normally send the data to your backend
+    console.log({
+      productName,
+      safetyVote,
+      tasteVote,
+    });
+
+    toast({
+        title: "Vibe Submitted!",
+        description: `Your vibe for ${productName} has been recorded.`,
+    })
+
+    // Reset votes after submission
+    setSafetyVote(null);
+    setTasteVote(null);
+  }
 
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Vibe Check</CardTitle>
-        <CardDescription>Rate the current product</CardDescription>
+        <CardDescription>How was your experience with this product?</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
@@ -118,7 +139,7 @@ export function VotingPanel() {
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-4">
-         <Button disabled={!safetyVote || !tasteVote} className="w-full">
+         <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote} className="w-full">
           Submit Vibe
         </Button>
          <Button variant="link" className="text-muted-foreground w-full">

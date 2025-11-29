@@ -13,9 +13,17 @@ import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CameraCapture } from './camera-capture';
 
-export function ImageUploadDialog({ children }: { children: ReactNode }) {
+type ImageUploadDialogProps = {
+  children: ReactNode;
+  onProductIdentified?: (productName: string) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+
+export function ImageUploadDialog({ children, onProductIdentified, open, onOpenChange }: ImageUploadDialogProps) {
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -31,10 +39,10 @@ export function ImageUploadDialog({ children }: { children: ReactNode }) {
             <TabsTrigger value="camera">Use Camera</TabsTrigger>
           </TabsList>
           <TabsContent value="upload" className="pt-4">
-            <ImageUploadForm />
+            <ImageUploadForm onProductIdentified={onProductIdentified} />
           </TabsContent>
           <TabsContent value="camera" className="pt-4">
-            <CameraCapture />
+            <CameraCapture onProductIdentified={onProductIdentified} />
           </TabsContent>
         </Tabs>
       </DialogContent>

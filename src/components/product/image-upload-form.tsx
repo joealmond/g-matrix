@@ -1,7 +1,7 @@
 'use client';
 
-import { useFormStatus } from 'react-dom';
 import { useActionState, useState, useRef, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
 import { handleImageUpload } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,11 @@ const initialState = {
   error: null,
 };
 
+type ImageUploadFormProps = {
+  onProductIdentified?: (productName: string) => void;
+};
+
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -25,7 +30,7 @@ function SubmitButton() {
   );
 }
 
-export function ImageUploadForm() {
+export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [state, formAction] = useActionState(handleImageUpload, initialState);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,14 +49,15 @@ export function ImageUploadForm() {
   };
 
   useEffect(() => {
-    if (state.productName || state.error) {
-      // Don't reset form immediately to allow user to see result
-      // It will reset when they re-open the dialog or select a new file
+    if (state.productName && onProductIdentified) {
+      onProductIdentified(state.productName);
     }
-  }, [state]);
+  }, [state.productName, onProductIdentified]);
+  
+  const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo">Product Photo</Label>
         <Input
@@ -78,17 +84,7 @@ export function ImageUploadForm() {
 
       <SubmitButton />
 
-      {state.productName && (
-        <Alert>
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Product Identified!</AlertTitle>
-          <AlertDescription>
-            We think this is:{' '}
-            <span className="font-bold">{state.productName}</span>. You can now
-            search for it.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Visual feedback is now handled by closing the dialog and redirecting */}
       {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />

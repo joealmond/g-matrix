@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useActionState } from 'react';
+import { useState, useRef, useEffect, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { handleImageUpload } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+type CameraCaptureProps = {
+  onProductIdentified?: (productName: string) => void;
+};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -19,7 +22,7 @@ function SubmitButton() {
   );
 }
 
-export function CameraCapture() {
+export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const [state, formAction] = useActionState(handleImageUpload, {
     productName: null,
     error: null,
@@ -36,7 +39,7 @@ export function CameraCapture() {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: { facingMode: 'environment' },
           });
           setHasCameraPermission(true);
           if (videoRef.current) {
@@ -73,6 +76,12 @@ export function CameraCapture() {
       }
     };
   }, [toast]);
+  
+  useEffect(() => {
+    if (state.productName && onProductIdentified) {
+      onProductIdentified(state.productName);
+    }
+  }, [state.productName, onProductIdentified]);
 
   const handleCapture = () => {
     if (videoRef.current && canvasRef.current) {
@@ -171,18 +180,8 @@ export function CameraCapture() {
           </div>
         </form>
       )}
-
-      {state.productName && (
-        <Alert>
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Product Identified!</AlertTitle>
-          <AlertDescription>
-            We think this is:{' '}
-            <span className="font-bold">{state.productName}</span>. You can now
-            search for it.
-          </AlertDescription>
-        </Alert>
-      )}
+      
+      {/* Visual feedback is now inside the dialog and handled by redirection */}
       {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
