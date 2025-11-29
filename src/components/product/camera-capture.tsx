@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect, useActionState, useTransition } from 'react';
 import { handleImageAnalysis, type ImageAnalysisState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,7 +21,9 @@ const initialState: ImageAnalysisState = {
 }
 
 function SubmitButton() {
-  const { pending } = useFormStatus();
+  const [isPending, startTransition] = useTransition();
+
+  const { pending } = {pending: isPending}; // to keep the old naming
   return (
     <Button type="submit" disabled={pending} className="w-full">
       {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -33,6 +34,7 @@ function SubmitButton() {
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const [state, formAction] = useActionState(handleImageAnalysis, initialState);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const app = useFirebaseApp();
 
@@ -150,6 +152,16 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     setCapturedFile(null);
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!capturedFile) return;
+    const formData = new FormData();
+    formData.append('photo', capturedFile);
+    startTransition(() => {
+      formAction(formData);
+    });
+  };
+
   const dataURLtoFile = (dataurl: string, filename: string) => {
     const arr = dataurl.split(',');
     if (arr.length < 2) return null;
@@ -201,9 +213,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </Button>
         </div>
       ) : (
-        <form action={formAction} className="space-y-4">
-          <input type="file" name="photo" defaultValue={capturedFile ? undefined : ""} style={{ display: 'none' }} />
-           {capturedFile && <input type="hidden" name="photo" value={capturedFile as any} />}
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
@@ -220,7 +230,10 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Retake
               </Button>
-              <SubmitButton />
+               <Button type="submit" disabled={isPending} className="w-full">
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isPending ? 'Analyzing...' : 'Analyze Captured Image'}
+              </Button>
             </div>
           )}
         </form>

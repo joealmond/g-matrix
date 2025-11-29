@@ -1,7 +1,6 @@
 'use client';
 
-import { useActionState, useState, useRef, useEffect } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useActionState, useState, useRef, useEffect, useTransition } from 'react';
 import { handleImageAnalysis, type ImageAnalysisState } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,18 +23,10 @@ type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
 };
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {pending ? 'Analyzing...' : 'Analyze Image'}
-    </Button>
-  );
-}
 
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [state, formAction] = useActionState(handleImageAnalysis, initialState);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const app = useFirebaseApp();
   const { toast } = useToast();
@@ -131,9 +122,27 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     handleFile(file);
   };
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedFile) {
+        toast({
+            variant: 'destructive',
+            title: 'No file selected',
+            description: 'Please select an image to analyze.',
+        });
+        return;
+    }
+    const formData = new FormData();
+    formData.append('photo', selectedFile);
+
+    startTransition(() => {
+        formAction(formData);
+    });
+  };
+
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo">Product Photo</Label>
         <div
@@ -159,7 +168,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             name="photo"
             type="file"
             accept="image/*"
-            required
             onChange={handleFileChange}
             ref={fileInputRef}
             className="sr-only"
@@ -184,7 +192,10 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             Uploading...
         </Button>
       ) : (
-        <SubmitButton />
+         <Button type="submit" disabled={isPending || !selectedFile} className="w-full">
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isPending ? 'Analyzing...' : 'Analyze Image'}
+        </Button>
       )}
 
 
