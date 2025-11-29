@@ -26,9 +26,13 @@ import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
+import { Fab } from '@/components/layout/fab';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
 
   return (
     <SidebarProvider>
@@ -84,7 +88,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+             <SidebarMenuItem className="md:hidden">
               <ImageUploadDialog>
                 <SidebarMenuButton>
                   <Upload />
@@ -149,7 +153,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm lg:h-[60px] lg:px-6">
           <SidebarTrigger className="md:hidden" />
           <div className="flex-1">{/* Could add breadcrumbs here */}</div>
-          <div className="flex items-center gap-4">
+           <div className="hidden md:flex items-center gap-4">
+             <ImageUploadDialog>
+                <Button>
+                  <Upload className="mr-2 h-4 w-4" />
+                  <span>Scan Product</span>
+                </Button>
+              </ImageUploadDialog>
             <Button variant="ghost" size="icon" asChild>
               <Link href="/account">
                 <User />
@@ -158,6 +168,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">{children}</main>
+        {isMobile && (
+          <ImageUploadDialog>
+            <Fab>
+              <Upload />
+            </Fab>
+          </ImageUploadDialog>
+        )}
       </SidebarInset>
     </SidebarProvider>
   );

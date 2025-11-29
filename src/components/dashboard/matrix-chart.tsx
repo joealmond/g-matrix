@@ -20,6 +20,7 @@ import {
   CartesianGrid,
   Label,
   ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts';
 
 const chartData = [
@@ -31,6 +32,10 @@ const chartData = [
   { product: 'Snyders GF Pretzels', safety: 75, taste: 92 },
   { product: 'Katz Donuts', safety: 88, taste: 85 },
   { product: 'Oreo Gluten Free', safety: 60, taste: 98 },
+  { product: 'Cardboard Box', safety: 10, taste: 5 },
+  { product: 'Mystery Meat', safety: 20, taste: 90 },
+  { product: 'Safe but Bland Crackers', safety: 95, taste: 20 },
+
 ];
 
 const chartConfig = {
@@ -41,8 +46,8 @@ const chartConfig = {
     label: 'Taste',
   },
   product: {
-    label: 'Product'
-  }
+    label: 'Product',
+  },
 };
 
 export function MatrixChart() {
@@ -55,9 +60,9 @@ export function MatrixChart() {
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="aspect-video h-[400px] w-full"
+          className="w-full aspect-square sm:aspect-video h-auto"
         >
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height={400}>
             <ScatterChart
               margin={{
                 top: 20,
@@ -66,7 +71,46 @@ export function MatrixChart() {
                 left: 20,
               }}
             >
-              <CartesianGrid
+              {/* Quadrant Backgrounds */}
+              <ReferenceArea
+                x1={50}
+                x2={100}
+                y1={50}
+                y2={100}
+                stroke="hsl(var(--primary) / 0.2)"
+                fill="hsl(var(--primary) / 0.1)"
+                ifOverflow="visible"
+              />
+              <ReferenceArea
+                x1={0}
+                x2={50}
+                y1={50}
+                y2={100}
+                stroke="hsl(var(--accent) / 0.2)"
+                fill="hsl(var(--accent) / 0.1)"
+                ifOverflow="visible"
+              />
+              <ReferenceArea
+                x1={50}
+                x2={100}
+                y1={0}
+                y2={50}
+                stroke="hsl(var(--destructive) / 0.2)"
+                fill="hsl(var(--destructive) / 0.1)"
+                ifOverflow="visible"
+              />
+              <ReferenceArea
+                x1={0}
+                x2={50}
+                y1={0}
+                y2={50}
+                stroke="hsl(var(--muted) / 0.3)"
+                fill="hsl(var(--muted) / 0.2)"
+                ifOverflow="visible"
+              />
+
+              {/* Quadrant Labels */}
+               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="hsl(var(--border))"
               />
@@ -74,37 +118,55 @@ export function MatrixChart() {
                 dataKey="taste"
                 type="number"
                 name="Taste"
-                unit="%"
                 domain={[0, 100]}
                 stroke="hsl(var(--foreground))"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
               >
                 <Label
-                  value="Taste Vibe"
+                  value="Was it good?"
                   offset={-25}
                   position="insideBottom"
                   fill="hsl(var(--foreground))"
+                  className="text-sm"
                 />
               </XAxis>
               <YAxis
                 dataKey="safety"
                 type="number"
                 name="Safety"
-                unit="%"
                 domain={[0, 100]}
                 stroke="hsl(var(--foreground))"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                 tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
               >
                 <Label
-                  value="Safety Vibe"
+                  value="Did you survive?"
                   angle={-90}
                   offset={-5}
                   position="insideLeft"
                   fill="hsl(var(--foreground))"
+                   className="text-sm"
                 />
               </YAxis>
+              
+               {/* Labels positioned with recharts API */}
+              <Label content={({ viewBox }) => {
+                  if (!viewBox || !viewBox.width || !viewBox.height) return null;
+                  const { x, y, width, height } = viewBox;
+                  const cx = x + width / 2;
+                  const cy = y + height / 2;
+                  return (
+                    <>
+                      <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--primary-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50">The Holy Grail</text>
+                      <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50">Survivor Food</text>
+                      <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50">The Bin</text>
+                      <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50">Russian Roulette</text>
+                    </>
+                  );
+                }}
+              />
+
               <ChartTooltip
                 cursor={{ strokeDasharray: '3 3' }}
                 content={

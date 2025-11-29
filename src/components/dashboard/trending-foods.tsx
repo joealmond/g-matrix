@@ -26,6 +26,9 @@ export function TrendingFoods() {
         <ul className="space-y-4">
           {trendingFoods.map(food => {
             const image = PlaceHolderImages.find(img => img.id === food.imageId);
+            const safetyColor = food.safe > 70 ? 'text-green-400' : food.safe > 40 ? 'text-yellow-400' : 'text-red-400';
+            const tasteColor = food.taste > 70 ? 'text-primary' : food.taste > 40 ? 'text-yellow-400' : 'text-blue-400';
+
             return (
               <li key={food.name} className="flex items-center gap-4">
                 <Avatar className="h-12 w-12 rounded-lg">
@@ -44,9 +47,9 @@ export function TrendingFoods() {
                 <div className="flex-1">
                   <p className="font-semibold">{food.name}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="font-bold text-green-400">{food.safe}% Safe</span>
+                    <span className={`font-bold ${safetyColor}`}>{food.safe}% Safe</span>
                     <span>•</span>
-                    <span className="font-bold text-primary">{food.taste}% Taste</span>
+                    <span className={`font-bold ${tasteColor}`}>{food.taste}% Taste</span>
                   </div>
                 </div>
               </li>
