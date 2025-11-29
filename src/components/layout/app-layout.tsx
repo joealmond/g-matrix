@@ -9,34 +9,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
 import { useEffect, useState } from 'react';
+import { DynamicHeaderButtons } from './dynamic-header-buttons';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isDialogOpen, setDialogOpen] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-
-  const handleProductIdentified = (productName: string, imageUrl?: string) => {
-    setDialogOpen(false);
-    
-    // Store data in sessionStorage to avoid long URLs
-    const productData = { name: productName, imageUrl: imageUrl || '' };
-    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
-
-    const url = `/vibe-check/${encodeURIComponent(productName)}`;
-    router.push(url);
-  }
-
-  const isSpecialPage = pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/');
-
-  const handleScanClick = () => {
-    setDialogOpen(true);
-  }
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -79,25 +54,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             <span className="sr-only">G-Matrix</span>
           </Link>
           <div className="flex-1" />
-           <div className="flex items-center gap-4">
-              {hasMounted && (
-                isSpecialPage ? (
-                 <Button asChild>
-                    <Link href="/">
-                      <ArrowLeft className="mr-2 h-4 w-4" />
-                      Back to Home
-                    </Link>
-                 </Button>
-              ) : (
-                <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
-                  <Button onClick={handleScanClick}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    <span>Scan Product</span>
-                  </Button>
-                </ImageUploadDialog>
-              )
-              )}
-          </div>
+           <DynamicHeaderButtons />
         </nav>
       </header>
       <main className="flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
