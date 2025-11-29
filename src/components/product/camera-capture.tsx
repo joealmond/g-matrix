@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState, useTransition } from 'react';
-import { handleImageAnalysis, type ImageAnalysisState } from '@/app/actions';
+import { useState, useRef, useEffect, useTransition } from 'react';
+import { handleImageAnalysis } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -14,24 +14,20 @@ type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
 };
 
-const initialState: ImageAnalysisState = {
-  productName: null,
-  error: null,
-};
-
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
-  const [state, formAction, isAnalyzing] = useActionState(handleImageAnalysis, initialState);
   const router = useRouter();
   const { app } = useFirebase();
+  const { toast } = useToast();
+  
+  const [isProcessing, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -73,38 +69,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-  useEffect(() => {
-    const uploadAndRedirect = async () => {
-        if (state.productName && capturedFile && app) {
-            setIsUploading(true);
-            try {
-                const storage = getStorage(app);
-                const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
-                const snapshot = await uploadBytes(storageRef, capturedFile, { contentType: capturedFile.type });
-                const imageUrl = await getDownloadURL(snapshot.ref);
-
-                if (onProductIdentified) {
-                    onProductIdentified(state.productName, imageUrl);
-                } else {
-                    router.push(`/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-                }
-            } catch (error) {
-                console.error("Upload failed:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Upload Failed",
-                    description: "Could not upload the product image.",
-                });
-            } finally {
-                setIsUploading(false);
-            }
-        }
-    };
-
-    uploadAndRedirect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, app]);
-
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -134,13 +98,52 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const handleRetake = () => {
     setCapturedImage(null);
     setCapturedFile(null);
+    setError(null);
   };
 
-  const handleSubmit = () => {
-    if (!capturedFile) return;
-    const formData = new FormData();
-    formData.append('photo', capturedFile);
-    formAction(formData);
+  const handleSubmit = async () => {
+    if (!capturedFile || !app) {
+      setError('No file captured or Firebase app not available.');
+      return;
+    }
+    setError(null);
+
+    startTransition(async () => {
+      try {
+        // 1. Analyze image to get product name
+        const formData = new FormData();
+        formData.append('photo', capturedFile);
+        const analysisResult = await handleImageAnalysis(null, formData);
+
+        if (analysisResult.error) {
+          setError(analysisResult.error);
+          return;
+        }
+
+        const productName = analysisResult.productName;
+        if (!productName) {
+          setError('Could not identify the product from the image.');
+          return;
+        }
+        
+        // 2. Upload image to Firebase Storage
+        const storage = getStorage(app);
+        const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
+        const snapshot = await uploadBytes(storageRef, capturedFile, { contentType: capturedFile.type });
+        const imageUrl = await getDownloadURL(snapshot.ref);
+
+        // 3. Redirect or call callback
+        if (onProductIdentified) {
+            onProductIdentified(productName, imageUrl);
+        } else {
+            router.push(`/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+        }
+      } catch (e: any) {
+        console.error("Image analysis or upload failed:", e);
+        const errorMessage = e.message || 'An unexpected error occurred.';
+        setError(`Processing failed: ${errorMessage}`);
+      }
+    });
   };
 
   const dataURLtoFile = (dataurl: string, filename: string) => {
@@ -175,14 +178,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
 
-  const isProcessing = isAnalyzing || isUploading;
-  const getButtonText = () => {
-    if (isAnalyzing) return 'Analyzing...';
-    if (isUploading) return 'Uploading...';
-    return 'Analyze Captured Image';
-  }
-
-
   return (
     <div className="space-y-4">
       {!capturedImage ? (
@@ -202,7 +197,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </Button>
         </div>
       ) : (
-        <form action={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
@@ -213,19 +208,19 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-             <Button type="submit" disabled={isProcessing} className="w-full">
+             <Button onClick={handleSubmit} disabled={isProcessing} className="w-full">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {getButtonText()}
-            </Button>
+              Analyze Captured Image
+             </Button>
           </div>
-        </form>
+        </div>
       )}
       
-      {state.error && (
+      {error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{state.error}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
     </div>
