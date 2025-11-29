@@ -5,3 +5,13 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 100
+env:
+  - variable: NEXT_PUBLIC_WEBPUSH_PUBLIC_KEY
+    value: BCr2ZKJHv88n5S7romKSR787ltOW4wZr0_7xVRpysjd-c3DFFX82ULRi3Pf4dNxtIVQJJRmHzj_JxKA_t3uuIJE
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: WEBPUSH_PRIVATE_KEY
+    secret: VAPID_PRIVATE_KEY
+    availability:
+      - RUNTIME
