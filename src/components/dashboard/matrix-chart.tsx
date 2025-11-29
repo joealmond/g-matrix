@@ -313,9 +313,10 @@ export function MatrixChart({
                       labelKey="product"
                       nameKey="product"
                       formatter={(value, name, props) => {
-                        const colorIndex = chartData.findIndex(d => d.product === value);
-                        if (colorIndex === -1) return [value, name];
-                        const color = chartColors[colorIndex % chartColors.length];
+                        const itemIndex = chartData.findIndex(d => d.product === props.payload.product);
+                        if (itemIndex === -1) return [value, name];
+                        const color = chartColors[itemIndex % chartColors.length];
+
                         if (name === 'product') {
                           return (
                             <span className="font-bold" style={{ color }}>
