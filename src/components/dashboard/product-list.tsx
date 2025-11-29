@@ -73,7 +73,7 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
                 </div>
               </div>
                <Button asChild variant="ghost" size="icon">
-                  <Link href={`/product/${item.name}`}>
+                  <Link href={`/product/${encodeURIComponent(item.name)}`}>
                     <ArrowRight />
                   </Link>
                 </Button>
