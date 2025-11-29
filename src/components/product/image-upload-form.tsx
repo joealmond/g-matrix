@@ -2,7 +2,7 @@
 
 import { useState, useRef, useActionState, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
-import type { ImageAnalysisState } from '@/lib/actions-types';
+import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const initialState: ImageAnalysisState = {
-  productName: null,
-  error: null,
-};
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -33,8 +29,8 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (state.error) {
@@ -69,11 +65,9 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
           });
 
           if (onProductIdentified) {
-            console.log("Calling onProductIdentified callback.");
             onProductIdentified(state.productName!, imageUrl);
           } else {
             const url = `/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`;
-            console.log("Redirecting to:", url);
             router.push(url);
           }
         } catch (uploadError: any) {
@@ -83,12 +77,14 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-          setIsUploading(false); // Reset on failure
+        } finally {
+            setIsUploading(false);
         }
       };
       uploadAndRedirect();
     }
-  }, [state.productName, state.error, selectedFile, app, onProductIdentified, router, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.productName, state.error, app, onProductIdentified, router, toast]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -171,6 +167,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             onChange={handleFileChange}
             ref={fileInputRef}
             className="sr-only"
+            required
           />
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useActionState } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
-import type { ImageAnalysisState } from '@/lib/actions-types';
+import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -10,12 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-
-const initialState: ImageAnalysisState = {
-  productName: null,
-  error: null,
-};
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -35,7 +29,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -89,7 +82,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     }
 
     if (state.productName && capturedFile && app) {
-      const uploadAndRedirect = async () => {
+      const uploadImage = async () => {
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
@@ -111,11 +104,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           });
 
           if (onProductIdentified) {
-            console.log("Calling onProductIdentified callback.");
             onProductIdentified(state.productName!, imageUrl);
           } else {
             const url = `/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`;
-            console.log("Redirecting to:", url);
             router.push(url);
           }
         } catch (uploadError: any) {
@@ -125,12 +116,14 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-          setIsUploading(false); // Reset on failure
+        } finally {
+            setIsUploading(false);
         }
       };
-      uploadAndRedirect();
+      uploadImage();
     }
-  }, [state.productName, state.error, capturedFile, app, onProductIdentified, router, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.productName, state.error, app, onProductIdentified, router, toast]);
 
 
   const handleCapture = () => {
@@ -173,7 +166,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         });
         return;
       }
-      const formData = new FormData(formRef.current!);
+      const formData = new FormData(e.currentTarget);
       formData.set('photo', capturedFile);
       formAction(formData);
   }
@@ -220,7 +213,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
 
   return (
-    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
