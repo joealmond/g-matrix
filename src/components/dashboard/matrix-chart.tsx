@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -85,13 +86,13 @@ const CustomDot = (props: any) => {
         cx={cx}
         cy={cy}
         r={isHighlighted ? 10 : 8}
-        fill={dotColor}
         strokeWidth={2}
         stroke={'hsl(var(--primary-foreground))'}
         className={cn(
           'cursor-pointer drop-shadow-lg',
           'transition-all'
         )}
+        style={{ fill: dotColor }}
       />
       {isHighlighted && <Dot cx={cx} cy={cy} r={12} fill="transparent" stroke={dotColor} strokeWidth={2} className="animate-pulse" />}
     </g>
