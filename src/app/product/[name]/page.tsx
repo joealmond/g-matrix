@@ -19,29 +19,35 @@ export default function ProductPage() {
   const { toast } = useToast();
   
   const initialProductName = decodeURIComponent(params.name as string);
-  const initialVibe = { safety: 70, taste: 80 };
-
-  const [productName, setProductName] = useState(initialProductName);
-  const [vibe, setVibe] = useState(initialVibe);
-  const [originalVibe, setOriginalVibe] = useState(initialVibe);
+  
+  // These will be null until a vibe is submitted for the first time
+  const [originalVibe, setOriginalVibe] = useState<{ safety: number; taste: number } | null>(null);
   const [originalProductName, setOriginalProductName] = useState(initialProductName);
+
+  const [vibe, setVibe] = useState<{ safety: number; taste: number } | null>(null);
+  const [productName, setProductName] = useState(initialProductName);
   
   const [showChart, setShowChart] = useState(false);
   
   const chartRef = useRef<HTMLDivElement>(null);
 
-  const isChanged = productName !== originalProductName || vibe.safety !== originalVibe.safety || vibe.taste !== originalVibe.taste;
+  const isChanged = originalVibe && vibe && (
+    productName !== originalProductName ||
+    vibe.safety !== originalVibe.safety ||
+    vibe.taste !== originalVibe.taste
+  );
 
   const handleVibeSubmit = (submittedVibe: { safety: number, taste: number}) => {
+    // Set both the current and original vibe to the newly submitted values
     setVibe(submittedVibe);
-    setOriginalVibe(submittedVibe); // Save this as the new baseline for fine-tuning
+    setOriginalVibe(submittedVibe); 
     setShowChart(true);
     setTimeout(() => {
       chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
   
-  const chartData = [{ product: productName, safety: vibe.safety, taste: vibe.taste }];
+  const chartData = vibe ? [{ product: productName, safety: vibe.safety, taste: vibe.taste }] : [];
 
   const handleSaveEdit = () => {
     toast({
@@ -50,12 +56,16 @@ export default function ProductPage() {
     });
     // Persist the new values as the original ones
     setOriginalProductName(productName);
-    setOriginalVibe(vibe);
+    if(vibe) {
+      setOriginalVibe(vibe);
+    }
   }
   
   const handleReset = () => {
     setProductName(originalProductName);
-    setVibe(originalVibe);
+    if (originalVibe) {
+      setVibe(originalVibe);
+    }
   }
 
   return (
@@ -80,7 +90,7 @@ export default function ProductPage() {
         <TrendingFoods />
       </div>
 
-      {showChart && (
+      {showChart && vibe && (
          <div className="md:col-span-3 grid gap-6 md:grid-cols-3" ref={chartRef}>
             <div className="md:col-span-2">
               <h2 className="text-2xl font-headline mb-4">Product Vibe</h2>
@@ -109,7 +119,7 @@ export default function ProductPage() {
                             max={100}
                             step={1}
                             value={[vibe.safety]}
-                            onValueChange={([value]) => setVibe(v => ({...v, safety: value}))}
+                            onValueChange={([value]) => setVibe(v => ({...v!, safety: value}))}
                          />
                        </div>
                        <div className="space-y-2">
@@ -120,7 +130,7 @@ export default function ProductPage() {
                             max={100}
                             step={1}
                             value={[vibe.taste]}
-                            onValueChange={([value]) => setVibe(v => ({...v, taste: value}))}
+                            onValueChange={([value]) => setVibe(v => ({...v!, taste: value}))}
                          />
                        </div>
                     </CardContent>
