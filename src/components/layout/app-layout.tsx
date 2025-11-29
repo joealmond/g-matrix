@@ -22,11 +22,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const productData = { name: productName, imageUrl: imageUrl || '' };
     sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
 
-    const url = `/product/${encodeURIComponent(productName)}`;
+    const url = `/vibe-check/${encodeURIComponent(productName)}`;
     router.push(url);
   }
 
-  const isProductPage = pathname.startsWith('/product/');
+  const isProductPage = pathname.startsWith('/vibe-check/');
 
   const handleScanClick = () => {
     setDialogOpen(true);
