@@ -23,7 +23,6 @@ import {
   ReferenceArea,
   ZAxis,
   Cell,
-  Dot,
 } from 'recharts';
 
 export const chartColors = [
@@ -202,13 +201,12 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick }: Mat
                   />
                 }
               />
-              <ZAxis dataKey="product" name="product" />
+              <ZAxis dataKey="product" name="product" range={[64, 64]} />
               <Scatter
                 name="Products"
                 data={chartData}
                 onClick={(data) => onPointClick?.(data.product)}
                 className="cursor-pointer"
-                shape={<Dot r={6}/>}
               >
                 {chartData.map((entry, index) => {
                   const isHighlighted = highlightedProduct === entry.product;
