@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useFirebaseApp } from '@/firebase';
 import { useRouter } from 'next/navigation';
-
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -17,33 +14,21 @@ type CameraCaptureProps = {
 
 const initialState: ImageAnalysisState = {
   productName: null,
+  imageUrl: null,
   error: null,
-}
-
-function SubmitButton() {
-  const [isPending, startTransition] = useTransition();
-
-  const { pending } = {pending: isPending}; // to keep the old naming
-  return (
-    <Button type="submit" disabled={pending} className="w-full">
-      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {pending ? 'Analyzing...' : 'Analyze Captured Image'}
-    </Button>
-  );
-}
+};
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const [state, formAction] = useActionState(handleImageAnalysis, initialState);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const app = useFirebaseApp();
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,8 +49,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           toast({
             variant: 'destructive',
             title: 'Camera Access Denied',
-            description:
-              'Please enable camera permissions in your browser settings.',
+            description: 'Please enable camera permissions in your browser settings.',
           });
         }
       } else {
@@ -87,39 +71,16 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-   useEffect(() => {
-    if (state.productName && capturedFile && app) {
-      const uploadAndRedirect = async () => {
-        setIsUploading(true);
-        try {
-          const storage = getStorage(app);
-          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
-          await uploadBytes(storageRef, capturedFile);
-          const imageUrl = await getDownloadURL(storageRef);
-
-          if (onProductIdentified) {
-            onProductIdentified(state.productName!, imageUrl);
-          } else {
-            router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-          }
-
-        } catch (uploadError: any) {
-          console.error("Image upload failed:", uploadError);
-          const errorMessage = uploadError.message || "Could not upload image.";
-          toast({
-            variant: "destructive",
-            title: "Analysis/Upload failed",
-            description: `Firebase Storage: ${errorMessage} (${uploadError.code})`
-          });
-        } finally {
-          setIsUploading(false);
-        }
-      };
-      
-      uploadAndRedirect();
+  useEffect(() => {
+    if (state.productName && state.imageUrl) {
+      if (onProductIdentified) {
+        onProductIdentified(state.productName, state.imageUrl);
+      } else {
+        router.push(`/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, capturedFile]);
+  }, [state.productName, state.imageUrl]);
 
 
   const handleCapture = () => {
@@ -155,9 +116,10 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!capturedFile) return;
-    const formData = new FormData();
-    formData.append('photo', capturedFile);
+
     startTransition(() => {
+      const formData = new FormData();
+      formData.append('photo', capturedFile);
       formAction(formData);
     });
   };
@@ -213,29 +175,22 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
             <canvas ref={canvasRef} className="hidden" />
           </div>
-          {isUploading ? (
-             <Button disabled className="w-full">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleRetake} type="button">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retake
             </Button>
-          ) : (
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={handleRetake} type="button">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Retake
-              </Button>
-               <Button type="submit" disabled={isPending} className="w-full">
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isPending ? 'Analyzing...' : 'Analyze Captured Image'}
-              </Button>
-            </div>
-          )}
+             <Button type="submit" disabled={isPending} className="w-full">
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isPending ? 'Analyzing...' : 'Analyze Captured Image'}
+            </Button>
+          </div>
         </form>
       )}
       

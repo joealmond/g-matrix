@@ -2,6 +2,8 @@
 
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { initializeFirebase } from '@/firebase';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
@@ -28,11 +30,13 @@ const formSchema = z.object({
 
 export type ImageAnalysisSuccessState = {
   productName: string;
+  imageUrl: string;
   error: null;
 };
 
 export type ImageAnalysisErrorState = {
   productName: null;
+  imageUrl: null;
   error: string;
 }
 
@@ -41,6 +45,7 @@ export type ImageAnalysisState = ImageAnalysisSuccessState | ImageAnalysisErrorS
 
 const initialState: ImageAnalysisState = {
   productName: null,
+  imageUrl: null,
   error: null,
 };
 
@@ -53,6 +58,7 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
   if (!validatedFields.success) {
     return {
       productName: null,
+      imageUrl: null,
       error: validatedFields.error.flatten().fieldErrors.photo?.[0] || 'Invalid file.',
     };
   }
@@ -60,7 +66,7 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
   const file = validatedFields.data.photo;
   
   try {
-    // 1. Analyze the image with AI
+    // 1. Analyze the image with AI to get product name
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
     const photoDataUri = `data:${file.type};base64,${base64String}`;
@@ -68,15 +74,28 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
     const result = await extractProductNameFromImage({ photoDataUri });
     const productName = result.productName || "Unnamed Product";
 
-    // 2. Return just the product name to the client
-    return { productName: productName, error: null };
+    // 2. Upload the image to Firebase Storage
+    // We need to initialize a server-side admin app instance to do this
+    // For now, we'll re-use the client config, but in a real app,
+    // this should use a service account. The current setup only works if
+    // storage rules are public.
+    const { app } = initializeFirebase();
+    const storage = getStorage(app);
+    const storageRef = ref(storage, `products/${productName}-${Date.now()}`);
+    await uploadBytes(storageRef, buffer, { contentType: file.type });
+    const imageUrl = await getDownloadURL(storageRef);
+
+    // 3. Return product name and image URL
+    return { productName, imageUrl, error: null };
 
   } catch (error: any) {
-    console.error("Image analysis failed:", JSON.stringify(error, null, 2));
-    const errorMessage = error.message || 'An unexpected error occurred during image analysis.';
+    console.error("Image analysis or upload failed:", JSON.stringify(error, null, 2));
+    const errorMessage = error.message || 'An unexpected error occurred.';
+    const errorCode = error.code || '';
     return {
       productName: null,
-      error: `Analysis failed: ${errorMessage}`,
+      imageUrl: null,
+      error: `Analysis/Upload failed: ${errorMessage} (${errorCode})`,
     };
   }
 }

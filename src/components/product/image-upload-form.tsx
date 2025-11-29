@@ -10,12 +10,11 @@ import { Loader2, Terminal, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useFirebaseApp } from '@/firebase';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 
 const initialState: ImageAnalysisState = {
   productName: null,
+  imageUrl: null,
   error: null,
 };
 
@@ -23,55 +22,28 @@ type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
 };
 
-
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [state, formAction] = useActionState(handleImageAnalysis, initialState);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  const app = useFirebaseApp();
   const { toast } = useToast();
 
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.productName && selectedFile && app) {
-      const uploadAndRedirect = async () => {
-        setIsUploading(true);
-        try {
-          const storage = getStorage(app);
-          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
-          await uploadBytes(storageRef, selectedFile);
-          const imageUrl = await getDownloadURL(storageRef);
-
-          if (onProductIdentified) {
-            onProductIdentified(state.productName!, imageUrl);
-          } else {
-             router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
-          }
-        } catch (uploadError: any) {
-           console.error("Image upload failed:", uploadError);
-           const errorMessage = uploadError.message || "Could not upload image.";
-          toast({
-            variant: "destructive",
-            title: "Analysis/Upload failed",
-            description: `Firebase Storage: ${errorMessage} (${uploadError.code})`
-          });
-        } finally {
-          setIsUploading(false);
-        }
-      };
-      
-      uploadAndRedirect();
+    if (state.productName && state.imageUrl) {
+      if (onProductIdentified) {
+        onProductIdentified(state.productName, state.imageUrl);
+      } else {
+        router.push(`/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`);
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, selectedFile]);
-  
+  }, [state.productName, state.imageUrl]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -81,11 +53,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      
-      // Reset the native file input so the same file can be selected again
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     } else {
       setPreview(null);
       setSelectedFile(null);
@@ -94,30 +61,32 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFile(e.target.files?.[0]);
+     if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
   };
-  
+
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
-  
+
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   };
-  
+
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    
     const file = e.dataTransfer.files[0];
     handleFile(file);
   };
@@ -125,26 +94,25 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedFile) {
-        toast({
-            variant: 'destructive',
-            title: 'No file selected',
-            description: 'Please select an image to analyze.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'No file selected',
+        description: 'Please select an image to analyze.',
+      });
+      return;
     }
-    const formData = new FormData();
-    formData.append('photo', selectedFile);
 
     startTransition(() => {
-        formAction(formData);
+      const formData = new FormData();
+      formData.append('photo', selectedFile);
+      formAction(formData);
     });
   };
-
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
-        <Label htmlFor="photo">Product Photo</Label>
+        <Label htmlFor="photo-upload">Product Photo</Label>
         <div
           className={cn(
             'relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/50 hover:bg-muted/80 transition-colors',
@@ -164,7 +132,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             <p className="text-xs text-muted-foreground">PNG, JPG, WEBP (MAX. 5MB)</p>
           </div>
           <Input
-            id="photo"
+            id="photo-upload"
             name="photo"
             type="file"
             accept="image/*"
@@ -177,27 +145,14 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
       {preview && (
         <div className="relative h-48 w-full overflow-hidden rounded-md border">
-          <Image
-            src={preview}
-            alt="Image preview"
-            fill
-            style={{ objectFit: 'contain' }}
-          />
+          <Image src={preview} alt="Image preview" fill style={{ objectFit: 'contain' }} />
         </div>
       )}
 
-      {isUploading ? (
-        <Button disabled className="w-full">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Uploading...
-        </Button>
-      ) : (
-         <Button type="submit" disabled={isPending || !selectedFile} className="w-full">
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isPending ? 'Analyzing...' : 'Analyze Image'}
-        </Button>
-      )}
-
+      <Button type="submit" disabled={isPending || !selectedFile} className="w-full">
+        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {isPending ? 'Analyzing...' : 'Analyze Image'}
+      </Button>
 
       {state.error && (
         <Alert variant="destructive">
