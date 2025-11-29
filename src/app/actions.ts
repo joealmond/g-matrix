@@ -1,5 +1,5 @@
 'use server';
-
+import 'dotenv/config';
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
 import * as admin from 'firebase-admin';
@@ -52,7 +52,7 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
     return {
       productName: null,
       imageUrl: null,
-      error: "Server configuration error: Firebase Admin SDK not initialized.",
+      error: "Server configuration error: Firebase Admin SDK not initialized. Please check environment variables.",
     };
   }
 
