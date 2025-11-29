@@ -2,7 +2,7 @@
 
 import { useState, useRef, useActionState, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
-import { initialState } from '@/lib/actions-types';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,11 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+const initialState: ImageAnalysisState = {
+  productName: null,
+  error: null,
+};
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -33,11 +38,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   useEffect(() => {
     if (state.error) {
-        toast({
-            variant: "destructive",
-            title: "Analysis Error",
-            description: state.error,
-        });
+      toast({
+        variant: "destructive",
+        title: "Analysis Error",
+        description: state.error,
+      });
+      return;
     }
 
     if (state.productName && selectedFile && app) {
@@ -46,7 +52,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
-          const storageRef = ref(storage, `uploads/${selectedFile.name}-${Date.now()}`);
+          const storageRef = ref(storage, `uploads/${Date.now()}-${selectedFile.name}`);
           
           console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, selectedFile, {
@@ -57,6 +63,11 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
           const imageUrl = await getDownloadURL(snapshot.ref);
           console.log("Download URL obtained:", imageUrl);
           
+          toast({
+            title: 'Product Identified!',
+            description: `Found: ${state.productName}`,
+          });
+
           if (onProductIdentified) {
             console.log("Calling onProductIdentified callback.");
             onProductIdentified(state.productName!, imageUrl);
@@ -72,13 +83,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-          setIsUploading(false);
+          setIsUploading(false); // Reset on failure
         }
       };
       uploadAndRedirect();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, state.error]);
+  }, [state.productName, state.error, selectedFile, app, onProductIdentified, router, toast]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -121,6 +131,11 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     handleFile(file);
+    if (fileInputRef.current) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInputRef.current.files = dataTransfer.files;
+    }
   };
   
   const isBusy = isProcessing || isUploading;
