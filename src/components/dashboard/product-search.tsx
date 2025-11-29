@@ -7,40 +7,30 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
-export function ProductSearch() {
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
+interface ProductSearchProps {
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
+}
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      router.push(`/product/${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
-
+export function ProductSearch({ searchTerm, onSearchTermChange }: ProductSearchProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Find Your Vibe</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSearch} className="flex w-full items-center space-x-2">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search for a gluten-free product..."
-            className="flex-1"
+            className="w-full pl-8"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => onSearchTermChange(e.target.value)}
           />
-          <Button type="submit" size="icon" aria-label="Search">
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

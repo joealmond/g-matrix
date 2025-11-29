@@ -49,6 +49,11 @@ export default function ProductPage() {
     // Here you would typically update the original values
     // For this demo, we'll just reflect the local state change
   }
+  
+  const handleReset = () => {
+    setProductName(originalProductName);
+    setVibe(originalVibe);
+  }
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
@@ -123,10 +128,14 @@ export default function ProductPage() {
                        </div>
                     </CardContent>
                     {isEditing && (
-                        <CardFooter>
+                        <CardFooter className="flex-col gap-2">
                              <Button onClick={handleSaveEdit} className="w-full" disabled={!isChanged}>
                                 <Save className="mr-2 h-4 w-4" />
                                 Confirm Vibe
+                             </Button>
+                             <Button onClick={handleReset} variant="outline" className="w-full" disabled={!isChanged}>
+                                <Undo className="mr-2 h-4 w-4" />
+                                Reset
                              </Button>
                         </CardFooter>
                     )}
