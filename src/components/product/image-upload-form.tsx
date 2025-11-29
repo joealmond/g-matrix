@@ -65,10 +65,11 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
           }
         } catch (uploadError: any) {
            console.error("Image upload failed:", uploadError);
+           const errorMessage = uploadError.message || "Could not upload image.";
           toast({
             variant: "destructive",
-            title: "Upload Failed",
-            description: `Could not upload image: ${uploadError.message}`
+            title: "Analysis/Upload failed",
+            description: `Firebase Storage: ${errorMessage} (${uploadError.code})`
           });
         } finally {
           setIsUploading(false);
@@ -78,7 +79,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
       uploadAndRedirect();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, selectedFile, app, router, onProductIdentified]);
+  }, [state.productName, selectedFile]);
   
 
   const handleFile = (file: File | null | undefined) => {
@@ -89,6 +90,11 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      
+      // Reset the native file input so the same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } else {
       setPreview(null);
       setSelectedFile(null);
@@ -124,19 +130,10 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     const file = e.dataTransfer.files[0];
     handleFile(file);
   };
-  
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if(selectedFile) {
-        const formData = new FormData();
-        formData.append('photo', selectedFile);
-        formAction(formData);
-    }
-  }
 
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo">Product Photo</Label>
         <div

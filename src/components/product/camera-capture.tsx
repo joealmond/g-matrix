@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebaseApp } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useFirebaseApp } from '@/firebase';
 import { useRouter } from 'next/navigation';
 
 
@@ -85,7 +85,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-  useEffect(() => {
+   useEffect(() => {
     if (state.productName && capturedFile && app) {
       const uploadAndRedirect = async () => {
         setIsUploading(true);
@@ -103,10 +103,11 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
         } catch (uploadError: any) {
           console.error("Image upload failed:", uploadError);
+          const errorMessage = uploadError.message || "Could not upload image.";
           toast({
             variant: "destructive",
-            title: "Upload Failed",
-            description: `Could not upload image: ${uploadError.message}`
+            title: "Analysis/Upload failed",
+            description: `Firebase Storage: ${errorMessage} (${uploadError.code})`
           });
         } finally {
           setIsUploading(false);
@@ -116,7 +117,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       uploadAndRedirect();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, capturedFile, app, router, onProductIdentified]);
+  }, [state.productName, capturedFile]);
+
 
   const handleCapture = () => {
     const video = videoRef.current;
@@ -163,15 +165,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     return new File([u8arr], filename, { type: mime });
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (capturedFile) {
-      const formData = new FormData();
-      formData.append('photo', capturedFile);
-      formAction(formData);
-    }
-  };
-
   if (hasCameraPermission === null) {
      return <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
@@ -208,7 +201,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={formAction} className="space-y-4">
+          <input type="file" name="photo" defaultValue={capturedFile ? undefined : ""} style={{ display: 'none' }} />
+           {capturedFile && <input type="hidden" name="photo" value={capturedFile as any} />}
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
