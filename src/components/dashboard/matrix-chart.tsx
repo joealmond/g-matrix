@@ -23,6 +23,7 @@ import {
   ReferenceArea,
   ZAxis,
   Cell,
+  Dot,
 } from 'recharts';
 
 export const chartColors = [
@@ -207,6 +208,7 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick }: Mat
                 data={chartData}
                 onClick={(data) => onPointClick?.(data.product)}
                 className="cursor-pointer"
+                shape={<Dot r={6}/>}
               >
                 {chartData.map((entry, index) => {
                   const isHighlighted = highlightedProduct === entry.product;
@@ -217,7 +219,6 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick }: Mat
                       stroke={isHighlighted ? 'white' : 'transparent'}
                       strokeWidth={isHighlighted ? 3 : 0}
                       className={isHighlighted ? 'animate-pulse' : ''}
-                      radius={isHighlighted ? 8 : 6}
                     />
                   );
                 })}
