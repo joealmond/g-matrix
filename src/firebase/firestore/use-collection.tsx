@@ -12,6 +12,8 @@ import {
   type QuerySnapshot,
 } from 'firebase/firestore';
 import { useFirestore } from '../provider';
+import { errorEmitter } from '../error-emitter';
+import { FirestorePermissionError } from '../errors';
 
 type Options = {
   listen: boolean;
@@ -45,10 +47,15 @@ export function useCollection<T>(
           );
           setData(docs);
           setLoading(false);
+          setError(null);
         },
         (err) => {
-          console.error(err);
-          setError(err);
+          const permissionError = new FirestorePermissionError({
+            path: (ref as CollectionReference).path,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          setError(permissionError);
           setLoading(false);
         }
       );
@@ -62,10 +69,15 @@ export function useCollection<T>(
           );
           setData(docs);
           setLoading(false);
+          setError(null);
         })
         .catch((err) => {
-          console.error(err);
-          setError(err);
+           const permissionError = new FirestorePermissionError({
+            path: (ref as CollectionReference).path,
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          setError(permissionError);
           setLoading(false);
         });
     }

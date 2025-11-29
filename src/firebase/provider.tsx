@@ -9,6 +9,7 @@ import {
 import type { FirebaseApp } from 'firebase/app';
 import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
+import FirebaseErrorListener from '@/components/FirebaseErrorListener';
 
 type Firebase = {
   app: FirebaseApp | null;
@@ -28,6 +29,7 @@ export function FirebaseProvider({
 }: PropsWithChildren<{ value: Firebase }>) {
   return (
     <FirebaseContext.Provider value={value}>
+      <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
   );

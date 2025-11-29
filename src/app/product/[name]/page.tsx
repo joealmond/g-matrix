@@ -13,11 +13,13 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { DraggableDot } from '@/components/dashboard/draggable-dot';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
-import { useDoc } from '@/firebase';
-import { useFirestore } from '@/firebase';
+import { useDoc, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, setDoc, collection, getDoc } from 'firebase/firestore';
 import type { Product, Vote } from '@/lib/types';
 import { useSearchParams } from 'next/navigation';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import type { SecurityRuleContext } from '@/firebase/errors';
 
 export default function ProductPage() {
   const params = useParams();
@@ -51,25 +53,23 @@ export default function ProductPage() {
     const checkAndCreateProduct = async () => {
       if (!product && productDocRef) {
         // Product doesn't exist, create it.
-        try {
-          const newProductData = {
+        const newProductData = {
             id: initialProductName,
             name: initialProductName,
             imageUrl: imageUrl || `https://picsum.photos/seed/${initialProductName}/400/400`,
             avgSafety: 50,
             avgTaste: 50,
             voteCount: 0,
-          };
-          await setDoc(productDocRef, newProductData);
-          // The useDoc hook will automatically update with the new data
-        } catch (error) {
-          console.error("Error creating product:", error);
-          toast({
-            variant: "destructive",
-            title: "Uh oh!",
-            description: "Could not create the new product.",
+        };
+        setDoc(productDocRef, newProductData)
+          .catch((serverError) => {
+              const permissionError = new FirestorePermissionError({
+                path: productDocRef.path,
+                operation: 'create',
+                requestResourceData: newProductData,
+              } satisfies SecurityRuleContext);
+              errorEmitter.emit('permission-error', permissionError);
           });
-        }
       } else if (product) {
          const initialVibe = { safety: product.avgSafety, taste: product.avgTaste };
          if (!vibe) {
@@ -81,7 +81,7 @@ export default function ProductPage() {
     };
 
     checkAndCreateProduct();
-  }, [product, loading, firestore, initialProductName, imageUrl, productDocRef, toast, vibe]);
+  }, [product, loading, firestore, initialProductName, imageUrl, productDocRef, vibe]);
 
 
   const isChanged = originalVibe && vibe && (
@@ -102,39 +102,50 @@ export default function ProductPage() {
   const handleSaveEdit = async () => {
     if (!firestore || !vibe || !product || !productDocRef) return;
 
-    try {
-      const voteRef = doc(collection(firestore, 'products', product.id, 'votes'));
-      await setDoc(voteRef, {
+    const voteData = {
         safety: vibe.safety,
         taste: vibe.taste,
         createdAt: serverTimestamp(),
+    };
+    const voteRef = doc(collection(firestore, 'products', product.id, 'votes'));
+
+    setDoc(voteRef, voteData)
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: voteRef.path,
+          operation: 'create',
+          requestResourceData: voteData,
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
       });
       
       const newVoteCount = (product.voteCount || 0) + 1;
       const newAvgSafety = ((product.avgSafety * (product.voteCount || 0)) + vibe.safety) / newVoteCount;
       const newAvgTaste = ((product.avgTaste * (product.voteCount || 0)) + vibe.taste) / newVoteCount;
       
-      await updateDoc(productDocRef, {
+      const productUpdateData = {
         avgSafety: newAvgSafety,
         avgTaste: newAvgTaste,
         voteCount: newVoteCount
-      });
+      };
 
-
-      toast({
-          title: "Vibe Updated!",
-          description: `Your fine-tuned vibe for ${productName} has been saved.`,
+      updateDoc(productDocRef, productUpdateData)
+        .then(() => {
+            toast({
+                title: "Vibe Updated!",
+                description: `Your fine-tuned vibe for ${productName} has been saved.`,
+            });
+            setOriginalProductName(productName);
+            setOriginalVibe(vibe);
+        })
+        .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: productDocRef.path,
+            operation: 'update',
+            requestResourceData: productUpdateData,
+          } satisfies SecurityRuleContext);
+          errorEmitter.emit('permission-error', permissionError);
       });
-      setOriginalProductName(productName);
-      setOriginalVibe(vibe);
-    } catch (error) {
-      console.error("Error saving vibe:", error);
-       toast({
-          variant: "destructive",
-          title: "Uh oh!",
-          description: "Could not save your updated vibe.",
-      });
-    }
   }
   
   const handleReset = () => {
