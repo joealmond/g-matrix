@@ -2,30 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Deny all reads and writes by default.
+    // Deny all reads and writes by default. This is the most secure starting point.
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // Allow public read access to the products collection and individual documents.
-    // Writes are only allowed by authenticated users.
-    match /products/{productId} {
-      allow get, list: if true;
-      allow create, update: if request.auth != null;
-    }
-
-    // Allow authenticated users to create votes for a product.
-    // Direct reading or modification of votes is disallowed as they are aggregated.
-    match /products/{productId}/votes/{voteId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false;
-    }
-
-    // Allow users to manage their own profile information.
-    // Users cannot delete their own profile record.
-    match /users/{userId} {
-      allow read, create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
     }
   }
 }
