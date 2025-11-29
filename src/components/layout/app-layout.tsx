@@ -80,7 +80,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex-1" />
            <div className="flex items-center gap-4">
-              {!hasMounted ? null : isSpecialPage ? (
+              {hasMounted && (
+                isSpecialPage ? (
                  <Button asChild>
                     <Link href="/">
                       <ArrowLeft className="mr-2 h-4 w-4" />
@@ -94,6 +95,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                     <span>Scan Product</span>
                   </Button>
                 </ImageUploadDialog>
+              )
               )}
           </div>
         </nav>
