@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 
@@ -19,6 +19,7 @@ type CameraCaptureProps = {
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { app } = useFirebase();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
@@ -73,7 +74,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-  useEffect(() => {
+   useEffect(() => {
     if (state.error) {
         toast({
             variant: "destructive",
@@ -83,12 +84,21 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     }
 
     if (state.productName && capturedFile && app) {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Required",
+          description: "Please sign in to upload images.",
+        });
+        return;
+      }
+      
       const uploadAndRedirect = async () => {
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
-          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          const storageRef = ref(storage, `uploads/${user.uid}/${capturedFile.name}-${Date.now()}`);
           
           console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, capturedFile, {
@@ -114,12 +124,14 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-           setIsUploading(false); // Reset on failure
+        } finally {
+          setIsUploading(false);
         }
       };
       uploadAndRedirect();
     }
-  }, [state.productName, state.error, capturedFile, app, router, toast, onProductIdentified]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.productName, state.error]);
 
 
   const handleCapture = () => {

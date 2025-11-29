@@ -6,13 +6,12 @@ import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Terminal, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type ImageUploadFormProps = {
@@ -23,6 +22,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { app } = useFirebase();
+  const { user } = useUser();
 
   const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
 
@@ -30,7 +30,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -43,12 +42,21 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     }
 
     if (state.productName && selectedFile && app) {
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Required",
+          description: "Please sign in to upload images.",
+        });
+        return;
+      }
+      
       const uploadAndRedirect = async () => {
         setIsUploading(true);
         console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
-          const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          const storageRef = ref(storage, `uploads/${user.uid}/${selectedFile.name}-${Date.now()}`);
           
           console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, selectedFile, {
@@ -74,12 +82,14 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-          setIsUploading(false); // Reset on failure
+        } finally {
+          setIsUploading(false);
         }
       };
       uploadAndRedirect();
     }
-  }, [state.productName, state.error, selectedFile, app, router, toast, onProductIdentified]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.productName, state.error]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -128,7 +138,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Image';
 
   return (
-    <form ref={formRef} action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
