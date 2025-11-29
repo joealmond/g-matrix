@@ -2,6 +2,7 @@
 
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
+import * as admin from 'firebase-admin';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -26,6 +27,21 @@ const formSchema = z.object({
     ),
 });
 
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
+    console.log("Firebase Admin SDK initialized.");
+  } catch (e: any) {
+    console.error("Failed to initialize Firebase Admin SDK:", e.message);
+  }
+}
+
+
 export async function handleImageAnalysis(prevState: any, formData: FormData): Promise<ImageAnalysisState> {
   const validatedFields = formSchema.safeParse({
     photo: formData.get('photo'),
@@ -34,6 +50,7 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
   if (!validatedFields.success) {
     return {
       productName: null,
+      imageUrl: null,
       error: validatedFields.error.flatten().fieldErrors.photo?.[0] || 'Invalid file.',
     };
   }
@@ -41,21 +58,45 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
   const file = validatedFields.data.photo;
   
   try {
+    // 1. Get buffer and data URI for analysis
     const buffer = await file.arrayBuffer();
     const base64String = Buffer.from(buffer).toString('base64');
     const photoDataUri = `data:${file.type};base64,${base64String}`;
 
-    const result = await extractProductNameFromImage({ photoDataUri });
-    const productName = result.productName || "Unnamed Product";
+    // 2. Analyze image to get product name
+    console.log("Starting image analysis...");
+    const analysisResult = await extractProductNameFromImage({ photoDataUri });
+    const productName = analysisResult.productName || "Unnamed Product";
+    console.log(`Image analysis successful. Product: ${productName}`);
 
-    return { productName, error: null };
+    // 3. Upload image to Firebase Storage using Admin SDK
+    const bucket = admin.storage().bucket();
+    const destination = `uploads/${Date.now()}-${file.name}`;
+    const fileUpload = bucket.file(destination);
+    
+    console.log(`Uploading to Firebase Storage at: ${destination}`);
+    await fileUpload.save(Buffer.from(buffer), {
+        metadata: {
+            contentType: file.type,
+        },
+    });
+
+    // 4. Get a public URL
+    const [imageUrl] = await fileUpload.getSignedUrl({
+      action: 'read',
+      expires: '03-01-2500', // Far future expiration date
+    });
+    console.log("Successfully uploaded and got signed URL:", imageUrl);
+
+    return { productName, imageUrl, error: null };
 
   } catch (error: any) {
-    console.error("Image analysis failed:", JSON.stringify(error, null, 2));
-    const errorMessage = error.message || 'An unexpected error occurred during image analysis.';
+    console.error("Full analysis/upload failed:", JSON.stringify(error, null, 2));
+    const errorMessage = error.code ? `${error.code}: ${error.message}` : (error.message || 'An unexpected error occurred.');
     return {
       productName: null,
-      error: `Analysis failed: ${errorMessage}`,
+      imageUrl: null,
+      error: `Action failed: ${errorMessage}`,
     };
   }
 }

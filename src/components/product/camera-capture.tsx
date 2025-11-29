@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useActionState } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
 import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { useFirebase } from '@/firebase';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useActionState } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -18,7 +15,6 @@ type CameraCaptureProps = {
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
-  const { app } = useFirebase();
   const { toast } = useToast();
 
   const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
@@ -26,11 +22,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -74,6 +68,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   }, [toast]);
   
    useEffect(() => {
+    if (isProcessing) return; // Don't do anything while action is running
+
     if (state.error) {
         toast({
             variant: "destructive",
@@ -83,50 +79,20 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         return;
     }
 
-    if (state.productName && capturedFile && app) {
-      const uploadImage = async () => {
-        if (isUploading) return;
-        setIsUploading(true);
-        console.log(`Starting upload for: ${state.productName}`);
-        try {
-          const storage = getStorage(app);
-          const storageRef = ref(storage, `uploads/${Date.now()}-${capturedFile.name}`);
-          
-          console.log("Uploading file to Firebase Storage...");
-          const snapshot = await uploadBytes(storageRef, capturedFile, {
-            contentType: capturedFile.type,
-          });
-          console.log("Upload complete. Getting download URL...");
-          
-          const imageUrl = await getDownloadURL(snapshot.ref);
-          console.log("Download URL obtained:", imageUrl);
-
-          toast({
+    if (state.productName && state.imageUrl) {
+        toast({
             title: 'Product Identified!',
             description: `Found: ${state.productName}`,
-          });
+        });
 
-          if (onProductIdentified) {
-            onProductIdentified(state.productName!, imageUrl);
-          } else {
-            const url = `/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`;
+        if (onProductIdentified) {
+            onProductIdentified(state.productName, state.imageUrl);
+        } else {
+            const url = `/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
             router.push(url);
-          }
-        } catch (uploadError: any) {
-          console.error("FIREBASE STORAGE UPLOAD FAILED:", uploadError);
-          toast({
-            variant: "destructive",
-            title: "Upload Failed",
-            description: uploadError.message || "Could not upload the product image.",
-          });
-          setIsUploading(false); // Reset on error
         }
-        // No finally block for setIsUploading, as we navigate away on success
-      };
-      uploadImage();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, state.error]);
+  }, [state, isProcessing, onProductIdentified, router, toast]);
 
 
   const handleCapture = () => {
@@ -210,11 +176,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
   
-  const isBusy = isProcessing || isUploading;
-  const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Captured Image';
+  const buttonText = isProcessing ? 'Processing...' : 'Analyze Captured Image';
 
   return (
-    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+       {/* This input is not used for submission data, but prevents form handler errors */}
+      <input type="file" name="photo" className="hidden" />
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -239,12 +206,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             <img src={capturedImage} alt="Captured" className="w-full" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={handleRetake} type="button" disabled={isBusy}>
+            <Button variant="outline" onClick={handleRetake} type="button" disabled={isProcessing}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-            <Button type="submit" disabled={isBusy || !capturedFile} className="w-full">
-              {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isProcessing || !capturedFile} className="w-full">
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>
           </div>
