@@ -7,6 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useFirebase } from '@/firebase';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -14,21 +16,21 @@ type CameraCaptureProps = {
 
 const initialState: ImageAnalysisState = {
   productName: null,
-  imageUrl: null,
   error: null,
 };
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
-  const [state, formAction] = useActionState(handleImageAnalysis, initialState);
-  const [isPending, startTransition] = useTransition();
+  const [state, formAction, isAnalyzing] = useActionState(handleImageAnalysis, initialState);
   const router = useRouter();
+  const { app } = useFirebase();
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,15 +74,36 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   }, [toast]);
   
   useEffect(() => {
-    if (state.productName && state.imageUrl) {
-      if (onProductIdentified) {
-        onProductIdentified(state.productName, state.imageUrl);
-      } else {
-        router.push(`/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`);
-      }
-    }
+    const uploadAndRedirect = async () => {
+        if (state.productName && capturedFile && app) {
+            setIsUploading(true);
+            try {
+                const storage = getStorage(app);
+                const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+                const snapshot = await uploadBytes(storageRef, capturedFile, { contentType: capturedFile.type });
+                const imageUrl = await getDownloadURL(snapshot.ref);
+
+                if (onProductIdentified) {
+                    onProductIdentified(state.productName, imageUrl);
+                } else {
+                    router.push(`/product/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+                }
+            } catch (error) {
+                console.error("Upload failed:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Upload Failed",
+                    description: "Could not upload the product image.",
+                });
+            } finally {
+                setIsUploading(false);
+            }
+        }
+    };
+
+    uploadAndRedirect();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.productName, state.imageUrl]);
+  }, [state.productName, app]);
 
 
   const handleCapture = () => {
@@ -113,15 +136,11 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     setCapturedFile(null);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (!capturedFile) return;
-
-    startTransition(() => {
-      const formData = new FormData();
-      formData.append('photo', capturedFile);
-      formAction(formData);
-    });
+    const formData = new FormData();
+    formData.append('photo', capturedFile);
+    formAction(formData);
   };
 
   const dataURLtoFile = (dataurl: string, filename: string) => {
@@ -156,6 +175,14 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
 
+  const isProcessing = isAnalyzing || isUploading;
+  const getButtonText = () => {
+    if (isAnalyzing) return 'Analyzing...';
+    if (isUploading) return 'Uploading...';
+    return 'Analyze Captured Image';
+  }
+
+
   return (
     <div className="space-y-4">
       {!capturedImage ? (
@@ -175,7 +202,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </Button>
         </div>
       ) : (
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+        <form action={handleSubmit} className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
@@ -186,9 +213,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-             <Button type="submit" disabled={isPending} className="w-full">
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPending ? 'Analyzing...' : 'Analyze Captured Image'}
+             <Button type="submit" disabled={isProcessing} className="w-full">
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {getButtonText()}
             </Button>
           </div>
         </form>
