@@ -105,7 +105,7 @@ export default function AccountPage() {
                <p className="text-muted-foreground">You are not signed in.</p>
             </div>
           )}
-        </Content>
+        </CardContent>
         <CardFooter>
           {user ? (
             <Button onClick={handleSignOut} className="w-full">
