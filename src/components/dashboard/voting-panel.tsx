@@ -24,17 +24,22 @@ const MehIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none
 const IceIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive"><path d="M12 2v2.4l-3.3 3.3-2.4 2.4-3.6 3.6L2.7 20l6.1-6.1 3.6-3.6 2.4-2.4L18 4.4V2"/><path d="m21.3 11.4-3.6 3.6-2.4 2.4-3.3 3.3V22h2.4l3.3-3.3 2.4-2.4 3.6-3.6Z"/><path d="M18 4.4 12 10.5l-3.6 3.6L2.7 20"/><path d="m11.4 2.7 6.1 6.1 3.6 3.6L22 18l-6.1-6.1-3.6-3.6L8.4 4.4Z"/></svg>;
 
 
-type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked' | null;
-type TasteVote = 'Yass' | 'Meh' | 'Pass' | null;
+type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked';
+type TasteVote = 'Yass' | 'Meh' | 'Pass';
+
+const voteMapping = {
+  safety: { 'Clean': 100, 'Sketchy': 50, 'Wrecked': 0 },
+  taste: { 'Yass': 100, 'Meh': 50, 'Pass': 0 }
+};
 
 interface VotingPanelProps {
   productName: string;
-  onVibeSubmit?: () => void;
+  onVibeSubmit?: (vibe: { safety: number; taste: number }) => void;
 }
 
 export function VotingPanel({ productName, onVibeSubmit }: VotingPanelProps) {
-  const [safetyVote, setSafetyVote] = useState<SafetyVote>(null);
-  const [tasteVote, setTasteVote] = useState<TasteVote>(null);
+  const [safetyVote, setSafetyVote] = useState<SafetyVote | null>(null);
+  const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
   const { toast } = useToast();
 
 
@@ -47,20 +52,27 @@ export function VotingPanel({ productName, onVibeSubmit }: VotingPanelProps) {
   };
   
   const handleSubmit = () => {
-    // This is where you would normally send the data to your backend
+    if (!safetyVote || !tasteVote) return;
+
+    const vibe = {
+      safety: voteMapping.safety[safetyVote],
+      taste: voteMapping.taste[tasteVote],
+    };
+
     console.log({
       productName,
       safetyVote,
       tasteVote,
+      vibe,
     });
 
     toast({
         title: "Vibe Submitted!",
-        description: `Your vibe for ${productName} has been recorded.`,
+        description: `Your vibe for ${productName} has been recorded. Now you can fine-tune it.`,
     })
 
     if (onVibeSubmit) {
-      onVibeSubmit();
+      onVibeSubmit(vibe);
     }
   }
 

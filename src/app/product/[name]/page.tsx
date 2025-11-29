@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Save, Undo } from 'lucide-react';
+import { ArrowLeft, Save, Undo } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -18,20 +18,23 @@ export default function ProductPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const originalProductName = decodeURIComponent(params.name as string);
-  const originalVibe = { safety: 70, taste: 80 };
+  const initialProductName = decodeURIComponent(params.name as string);
+  const initialVibe = { safety: 70, taste: 80 };
 
-  const [productName, setProductName] = useState(originalProductName);
-  const [vibe, setVibe] = useState(originalVibe);
+  const [productName, setProductName] = useState(initialProductName);
+  const [vibe, setVibe] = useState(initialVibe);
+  const [originalVibe, setOriginalVibe] = useState(initialVibe);
+  const [originalProductName, setOriginalProductName] = useState(initialProductName);
   
   const [showChart, setShowChart] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   
   const chartRef = useRef<HTMLDivElement>(null);
 
   const isChanged = productName !== originalProductName || vibe.safety !== originalVibe.safety || vibe.taste !== originalVibe.taste;
 
-  const handleVibeSubmit = () => {
+  const handleVibeSubmit = (submittedVibe: { safety: number, taste: number}) => {
+    setVibe(submittedVibe);
+    setOriginalVibe(submittedVibe); // Save this as the new baseline for fine-tuning
     setShowChart(true);
     setTimeout(() => {
       chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -41,13 +44,13 @@ export default function ProductPage() {
   const chartData = [{ product: productName, safety: vibe.safety, taste: vibe.taste }];
 
   const handleSaveEdit = () => {
-    setIsEditing(false);
     toast({
         title: "Vibe Updated!",
         description: `Your fine-tuned vibe for ${productName} has been saved.`,
-    })
-    // Here you would typically update the original values
-    // For this demo, we'll just reflect the local state change
+    });
+    // Persist the new values as the original ones
+    setOriginalProductName(productName);
+    setOriginalVibe(vibe);
   }
   
   const handleReset = () => {
@@ -61,7 +64,7 @@ export default function ProductPage() {
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-3xl flex items-center justify-between">
-              <span>Rate: {originalProductName}</span>
+              <span>Rate: {initialProductName}</span>
                <Button variant="ghost" onClick={() => router.push('/')}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Home
@@ -85,12 +88,9 @@ export default function ProductPage() {
             </div>
             <div className="md:col-span-1">
                  <Card>
-                    <CardHeader className='flex-row items-center justify-between'>
+                    <CardHeader>
                         <CardTitle className='font-headline'>Fine-Tune Vibe</CardTitle>
-                         <Button variant={isEditing ? "default" : "outline"} size="icon" onClick={() => setIsEditing(!isEditing)}>
-                            <Edit className="h-4 w-4"/>
-                            <span className="sr-only">Edit Vibe</span>
-                         </Button>
+                        <CardDescription>Adjust the scores to pinpoint the vibe.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
@@ -99,7 +99,6 @@ export default function ProductPage() {
                                 id="productName" 
                                 value={productName} 
                                 onChange={(e) => setProductName(e.target.value)}
-                                disabled={!isEditing} 
                             />
                         </div>
                        <div className="space-y-2">
@@ -111,7 +110,6 @@ export default function ProductPage() {
                             step={1}
                             value={[vibe.safety]}
                             onValueChange={([value]) => setVibe(v => ({...v, safety: value}))}
-                            disabled={!isEditing}
                          />
                        </div>
                        <div className="space-y-2">
@@ -123,17 +121,16 @@ export default function ProductPage() {
                             step={1}
                             value={[vibe.taste]}
                             onValueChange={([value]) => setVibe(v => ({...v, taste: value}))}
-                            disabled={!isEditing}
                          />
                        </div>
                     </CardContent>
-                    {isEditing && (
+                    {isChanged && (
                         <CardFooter className="flex-col gap-2">
-                             <Button onClick={handleSaveEdit} className="w-full" disabled={!isChanged}>
+                             <Button onClick={handleSaveEdit} className="w-full">
                                 <Save className="mr-2 h-4 w-4" />
                                 Confirm Vibe
                              </Button>
-                             <Button onClick={handleReset} variant="outline" className="w-full" disabled={!isChanged}>
+                             <Button onClick={handleReset} variant="outline" className="w-full">
                                 <Undo className="mr-2 h-4 w-4" />
                                 Reset
                              </Button>
