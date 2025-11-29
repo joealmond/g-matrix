@@ -73,45 +73,53 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     };
   }, [toast]);
   
-    useEffect(() => {
+  useEffect(() => {
     if (state.error) {
         toast({
             variant: "destructive",
-            title: "Error",
+            title: "Analysis Error",
             description: state.error,
         });
     }
 
-    if (state.productName && capturedFile && app && !isUploading) {
+    if (state.productName && capturedFile && app) {
       const uploadAndRedirect = async () => {
         setIsUploading(true);
+        console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
           const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          
+          console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, capturedFile, {
             contentType: capturedFile.type,
           });
+          console.log("Upload complete. Getting download URL...");
+          
           const imageUrl = await getDownloadURL(snapshot.ref);
+          console.log("Download URL obtained:", imageUrl);
 
           if (onProductIdentified) {
+            console.log("Calling onProductIdentified callback.");
             onProductIdentified(state.productName!, imageUrl);
           } else {
-            router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+            const url = `/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`;
+            console.log("Redirecting to:", url);
+            router.push(url);
           }
         } catch (uploadError: any) {
-          console.error("Upload failed:", uploadError);
+          console.error("FIREBASE STORAGE UPLOAD FAILED:", uploadError);
           toast({
             variant: "destructive",
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-           setIsUploading(false);
+           setIsUploading(false); // Reset on failure
         }
       };
       uploadAndRedirect();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, capturedFile, app, router, toast, onProductIdentified]);
+  }, [state.productName, state.error, capturedFile, app, router, toast, onProductIdentified]);
 
 
   const handleCapture = () => {
@@ -143,6 +151,22 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     setCapturedImage(null);
     setCapturedFile(null);
   };
+  
+  const handleSubmit = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      if (!capturedFile) {
+        toast({
+            variant: 'destructive',
+            title: 'No Image',
+            description: 'Please capture an image first.',
+        });
+        return;
+      }
+      const formData = new FormData(formRef.current!);
+      formData.set('photo', capturedFile);
+      formAction(formData);
+  }
+
 
   const dataURLtoFile = (dataurl: string, filename: string) => {
     const arr = dataurl.split(',');
@@ -205,7 +229,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         </div>
       ) : (
         <div className="space-y-4">
-           {capturedFile && <input type="hidden" name="photo" value={capturedFile.name} />}
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
@@ -216,34 +239,13 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
               Retake
             </Button>
             <Button type="submit" disabled={isBusy || !capturedFile} className="w-full"
-             onClick={(e) => {
-                if (!capturedFile) {
-                  e.preventDefault();
-                   toast({
-                        variant: 'destructive',
-                        title: 'No Image',
-                        description: 'Please capture an image first.',
-                    });
-                  return;
-                }
-                const formData = new FormData(formRef.current!);
-                formData.set('photo', capturedFile);
-                formAction(formData);
-             }}
+             onClick={handleSubmit}
             >
               {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>
           </div>
         </div>
-      )}
-
-      {state.error && (
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
       )}
     </form>
   );

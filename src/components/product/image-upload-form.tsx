@@ -30,47 +30,56 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (state.error) {
         toast({
             variant: "destructive",
-            title: "Error",
+            title: "Analysis Error",
             description: state.error,
         });
     }
 
-    if (state.productName && selectedFile && app && !isUploading) {
+    if (state.productName && selectedFile && app) {
       const uploadAndRedirect = async () => {
         setIsUploading(true);
+        console.log(`Starting upload for: ${state.productName}`);
         try {
           const storage = getStorage(app);
           const storageRef = ref(storage, `products/${state.productName}-${Date.now()}`);
+          
+          console.log("Uploading file to Firebase Storage...");
           const snapshot = await uploadBytes(storageRef, selectedFile, {
             contentType: selectedFile.type,
           });
-          const imageUrl = await getDownloadURL(snapshot.ref);
+          console.log("Upload complete. Getting download URL...");
 
+          const imageUrl = await getDownloadURL(snapshot.ref);
+          console.log("Download URL obtained:", imageUrl);
+          
           if (onProductIdentified) {
+            console.log("Calling onProductIdentified callback.");
             onProductIdentified(state.productName!, imageUrl);
           } else {
-            router.push(`/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`);
+            const url = `/product/${encodeURIComponent(state.productName!)}?imageUrl=${encodeURIComponent(imageUrl)}`;
+            console.log("Redirecting to:", url);
+            router.push(url);
           }
         } catch (uploadError: any) {
-          console.error("Upload failed:", uploadError);
+          console.error("FIREBASE STORAGE UPLOAD FAILED:", uploadError);
           toast({
             variant: "destructive",
             title: "Upload Failed",
             description: uploadError.message || "Could not upload the product image.",
           });
-           setIsUploading(false);
+          setIsUploading(false); // Reset on failure
         }
       };
       uploadAndRedirect();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, selectedFile, app, router, toast, onProductIdentified]);
+  }, [state.productName, state.error, selectedFile, app, router, toast, onProductIdentified]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
@@ -119,7 +128,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const buttonText = isProcessing ? 'Analyzing...' : isUploading ? 'Uploading...' : 'Analyze Image';
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
@@ -163,13 +172,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         {buttonText}
       </Button>
 
-      {state.error && (
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{state.error}</AlertDescription>
-        </Alert>
-      )}
     </form>
   );
 }
