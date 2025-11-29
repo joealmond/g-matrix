@@ -3,6 +3,7 @@ import { AdSlot } from '@/components/dashboard/ad-slot';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductList } from '@/components/dashboard/product-list';
 import { ProductSearch } from '@/components/dashboard/product-search';
+import { useState } from 'react';
 
 const chartData = [
   { product: 'Udis Gluten Free Bread', safety: 85, taste: 70 },
@@ -19,27 +20,33 @@ const chartData = [
 ];
 
 export default function Home() {
+  const [highlightedProduct, setHighlightedProduct] = useState<string | null>(null);
 
   const handlePointClick = (productName: string) => {
+    setHighlightedProduct(productName);
     const element = document.getElementById(`product-item-${productName}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
+  const handleItemClick = (productName: string) => {
+    setHighlightedProduct(productName);
+  };
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <div className="lg:col-span-3">
-        <ProductSearch />
-      </div>
-      <div className="lg:col-span-3">
-        <MatrixChart chartData={chartData} onPointClick={handlePointClick} />
-      </div>
-      <div className="lg:col-span-3">
+       <div className="lg:col-span-3">
         <AdSlot />
       </div>
+      <div className="lg:col-span-3">
+        <MatrixChart chartData={chartData} onPointClick={handlePointClick} highlightedProduct={highlightedProduct} />
+      </div>
        <div className="lg:col-span-3">
-        <ProductList chartData={chartData} />
+        <ProductSearch />
+      </div>
+       <div className="lg:col-span-3">
+        <ProductList chartData={chartData} onItemClick={handleItemClick} highlightedProduct={highlightedProduct} />
       </div>
     </div>
   );

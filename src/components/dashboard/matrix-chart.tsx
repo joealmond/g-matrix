@@ -26,13 +26,13 @@ import {
 } from 'recharts';
 
 export const chartColors = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(var(--primary))',
-  'hsl(var(--accent))',
+  '#8884d8',
+  '#82ca9d',
+  '#ffc658',
+  '#ff7300',
+  '#00C49F',
+  '#FFBB28',
+  '#FF8042',
   '#f59e0b',
   '#10b981',
   '#3b82f6',
@@ -54,7 +54,7 @@ const chartConfig = {
 
 type MatrixChartProps = {
   chartData: { product: string; safety: number; taste: number }[];
-  highlightedProduct?: string;
+  highlightedProduct?: string | null;
   onPointClick?: (productName: string) => void;
 };
 

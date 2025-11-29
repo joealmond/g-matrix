@@ -6,12 +6,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { chartColors } from './matrix-chart';
+import { cn } from '@/lib/utils';
 
 type ProductListProps = {
   chartData: { product: string; safety: number; taste: number }[];
+  onItemClick?: (productName: string) => void;
+  highlightedProduct?: string | null;
 };
 
-export function ProductList({ chartData }: ProductListProps) {
+export function ProductList({ chartData, onItemClick, highlightedProduct }: ProductListProps) {
   return (
     <Card>
       <CardHeader>
@@ -23,7 +26,11 @@ export function ProductList({ chartData }: ProductListProps) {
             <li
               key={item.product}
               id={`product-item-${item.product}`}
-              className="flex items-center gap-4 p-2 rounded-md transition-all scroll-mt-20"
+              onClick={() => onItemClick?.(item.product)}
+              className={cn(
+                "flex items-center gap-4 p-2 rounded-md transition-all scroll-mt-20 cursor-pointer",
+                highlightedProduct === item.product ? 'bg-muted ring-2 ring-primary' : 'hover:bg-muted'
+              )}
               style={{scrollMarginTop: '80px'}} // For smooth scroll offset
             >
               <span

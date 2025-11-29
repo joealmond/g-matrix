@@ -5,9 +5,9 @@ import { TrendingFoods } from '@/components/dashboard/trending-foods';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit, Save } from 'lucide-react';
+import { ArrowLeft, Edit, Save, Undo } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
@@ -17,13 +17,19 @@ export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  const [productName, setProductName] = useState(decodeURIComponent(params.name as string));
+  
+  const originalProductName = decodeURIComponent(params.name as string);
+  const originalVibe = { safety: 70, taste: 80 };
+
+  const [productName, setProductName] = useState(originalProductName);
+  const [vibe, setVibe] = useState(originalVibe);
   
   const [showChart, setShowChart] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [vibe, setVibe] = useState({ safety: 70, taste: 80 });
-
+  
   const chartRef = useRef<HTMLDivElement>(null);
+
+  const isChanged = productName !== originalProductName || vibe.safety !== originalVibe.safety || vibe.taste !== originalVibe.taste;
 
   const handleVibeSubmit = () => {
     setShowChart(true);
@@ -40,19 +46,21 @@ export default function ProductPage() {
         title: "Vibe Updated!",
         description: `Your fine-tuned vibe for ${productName} has been saved.`,
     })
+    // Here you would typically update the original values
+    // For this demo, we'll just reflect the local state change
   }
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
       <div className="md:col-span-3">
-        <Button variant="ghost" onClick={() => router.push('/')} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-        </Button>
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-3xl">
-              Rate: {productName}
+            <CardTitle className="font-headline text-3xl flex items-center justify-between">
+              <span>Rate: {originalProductName}</span>
+               <Button variant="ghost" onClick={() => router.push('/')}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Home
+              </Button>
             </CardTitle>
           </CardHeader>
         </Card>
@@ -74,15 +82,9 @@ export default function ProductPage() {
                  <Card>
                     <CardHeader className='flex-row items-center justify-between'>
                         <CardTitle className='font-headline'>Fine-Tune Vibe</CardTitle>
-                         <Button variant={isEditing ? "default" : "outline"} size="icon" onClick={() => {
-                             if (isEditing) {
-                                 handleSaveEdit();
-                             } else {
-                                 setIsEditing(true)
-                             }
-                         }}>
-                            {isEditing ? <Save className="h-4 w-4"/> : <Edit className="h-4 w-4"/>}
-                            <span className="sr-only">{isEditing ? "Save" : "Edit"}</span>
+                         <Button variant={isEditing ? "default" : "outline"} size="icon" onClick={() => setIsEditing(!isEditing)}>
+                            <Edit className="h-4 w-4"/>
+                            <span className="sr-only">Edit Vibe</span>
                          </Button>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -122,7 +124,7 @@ export default function ProductPage() {
                     </CardContent>
                     {isEditing && (
                         <CardFooter>
-                             <Button onClick={handleSaveEdit} className="w-full">
+                             <Button onClick={handleSaveEdit} className="w-full" disabled={!isChanged}>
                                 <Save className="mr-2 h-4 w-4" />
                                 Confirm Vibe
                              </Button>
