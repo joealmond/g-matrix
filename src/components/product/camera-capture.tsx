@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { analyzeAndUploadProduct, ImageAnalysisState } from '@/app/actions';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -14,10 +15,10 @@ type CameraCaptureProps = {
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const [isProcessing, startTransition] = useTransition();
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const isProcessing = false; // Feature is disabled
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,6 +87,37 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       }
     }
   };
+  
+  const handleSubmit = async () => {
+    if (!capturedImage) return;
+
+    startTransition(async () => {
+      const blob = await fetch(capturedImage).then(res => res.blob());
+      const file = new File([blob], 'captured-image.png', { type: 'image/png' });
+      
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const result = await analyzeAndUploadProduct({ success: false }, formData);
+
+      if (result.success && result.productName && result.imageUrl) {
+        if (onProductIdentified) {
+            onProductIdentified(result.productName, result.imageUrl);
+        } else {
+            const productData = { name: result.productName, imageUrl: result.imageUrl };
+            sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+            const url = `/vibe-check/${encodeURIComponent(result.productName)}?imageUrl=${encodeURIComponent(result.imageUrl)}`;
+            router.push(url);
+        }
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Analysis Failed',
+          description: result.error || 'Could not identify the product from the image.',
+        });
+      }
+    });
+  };
 
   const handleRetake = () => {
     setCapturedImage(null);
@@ -112,18 +144,10 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
   
-  const buttonText = 'Analyze Captured Image';
+  const buttonText = isProcessing ? 'Analyzing...' : 'Analyze Captured Image';
 
   return (
-    <form className="space-y-4">
-        <Alert variant="destructive">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Feature Disabled</AlertTitle>
-            <AlertDescription>
-                Image analysis is temporarily disabled due to a server configuration issue.
-            </AlertDescription>
-        </Alert>
-
+    <div className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -148,17 +172,17 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             <img src={capturedImage} alt="Captured" className="w-full" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" onClick={handleRetake} type="button" disabled={true}>
+            <Button variant="outline" onClick={handleRetake} type="button" disabled={isProcessing}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-            <Button type="submit" disabled={true} className="w-full">
+            <Button onClick={handleSubmit} disabled={isProcessing} className="w-full">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>
           </div>
         </div>
       )}
-    </form>
+    </div>
   );
 }

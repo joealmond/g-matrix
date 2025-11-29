@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,21 +9,71 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Terminal } from 'lucide-react';
+import { useFormState, useFormStatus } from 'react-dom';
+import { analyzeAndUploadProduct, initialState } from '@/app/actions';
+import { useRouter } from 'next/navigation';
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
 };
 
+function SubmitButton() {
+    const { pending } = useFormStatus();
+    return (
+        <Button type="submit" disabled={pending} className="w-full">
+            {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {pending ? 'Analyzing...' : 'Analyze Image'}
+        </Button>
+    )
+}
+
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const isProcessing = false; // Feature is disabled
+  
+  const [state, formAction] = useFormState(analyzeAndUploadProduct, initialState);
+
+  useEffect(() => {
+    if (state.success && state.productName && state.imageUrl) {
+        if (onProductIdentified) {
+            onProductIdentified(state.productName, state.imageUrl);
+        } else {
+            // Fallback navigation if the callback is not provided
+            const productData = { name: state.productName, imageUrl: state.imageUrl };
+            sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+            const url = `/vibe-check/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
+            router.push(url);
+        }
+        // Reset form after success
+        formRef.current?.reset();
+        setPreview(null);
+    } else if (state.error) {
+        toast({
+            variant: 'destructive',
+            title: 'Analysis Failed',
+            description: state.error,
+        });
+    }
+  }, [state, onProductIdentified, router, toast]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          variant: 'destructive',
+          title: 'File Too Large',
+          description: 'Please upload an image smaller than 5MB.'
+        });
+        setPreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -67,19 +117,9 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     }
     handleFile(file);
   };
-  
-  const buttonText = 'Analyze Image';
 
   return (
-    <form ref={formRef} className="space-y-4">
-        <Alert variant="destructive">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Feature Disabled</AlertTitle>
-            <AlertDescription>
-                Image analysis is temporarily disabled due to a server configuration issue.
-            </AlertDescription>
-        </Alert>
-
+    <form ref={formRef} action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
@@ -102,14 +142,13 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
           </div>
           <Input
             id="photo-upload"
-            name="photo"
+            name="image"
             type="file"
             accept="image/*"
             onChange={handleFileChange}
             ref={fileInputRef}
             className="sr-only"
             required
-            disabled={true}
           />
         </div>
       </div>
@@ -120,10 +159,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={true} className="w-full">
-        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {buttonText}
-      </Button>
+      <SubmitButton />
 
     </form>
   );
