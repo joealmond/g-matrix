@@ -4,7 +4,7 @@ import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { TrendingFoods } from '@/components/dashboard/trending-foods';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useRef, useState, useEffect, useMemo } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Save, Undo, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { DraggableDot } from '@/components/dashboard/draggable-dot';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
-import { useDoc, useFirestore } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, setDoc, collection, getDoc } from 'firebase/firestore';
 import type { Product, Vote } from '@/lib/types';
 import { useSearchParams } from 'next/navigation';
@@ -30,7 +30,7 @@ export default function ProductPage() {
   const initialProductName = decodeURIComponent(params.name as string);
   const imageUrl = searchParams.get('imageUrl');
 
-  const productDocRef = useMemo(() => {
+  const productDocRef = useMemoFirebase(() => {
     if (!firestore || !initialProductName) return null;
     return doc(firestore, 'products', initialProductName);
   }, [firestore, initialProductName]);

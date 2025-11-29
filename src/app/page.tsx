@@ -3,7 +3,7 @@ import { AdSlot } from '@/components/dashboard/ad-slot';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductList } from '@/components/dashboard/product-list';
 import { ProductSearch } from '@/components/dashboard/product-search';
-import { useCollection } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemo, useState } from 'react';
@@ -16,7 +16,7 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const firestore = useFirestore();
 
-  const productsCollection = useMemo(() => {
+  const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'products'));
   }, [firestore]);

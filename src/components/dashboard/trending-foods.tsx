@@ -8,9 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useCollection } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { useFirestore } from '@/firebase';
-import { useMemo } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import Link from 'next/link';
@@ -19,7 +18,7 @@ import Link from 'next/link';
 export function TrendingFoods() {
   const firestore = useFirestore();
 
-  const trendingQuery = useMemo(() => {
+  const trendingQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'products'), orderBy('avgSafety', 'desc'), limit(5));
   }, [firestore]);
