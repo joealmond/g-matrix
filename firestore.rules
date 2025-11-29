@@ -90,8 +90,8 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes and ensures relational integrity between the path and document data.
      */
     match /products/{productId}/votes/{voteId} {
-      allow get, list, create: if true;
-      allow update, delete: if isAdmin() && documentExists();
+      allow get, list, create, update: if true;
+      allow delete: if isAdmin() && documentExists();
     }
 
     /**
