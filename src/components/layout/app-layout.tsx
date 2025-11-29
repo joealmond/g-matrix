@@ -17,7 +17,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   const handleProductIdentified = (productName: string, imageUrl?: string) => {
     setDialogOpen(false);
-    const url = `/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`;
+    
+    // Store data in sessionStorage to avoid long URLs
+    const productData = { name: productName, imageUrl: imageUrl || '' };
+    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+
+    const url = `/product/${encodeURIComponent(productName)}`;
     router.push(url);
   }
 
