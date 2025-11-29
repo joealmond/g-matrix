@@ -17,7 +17,7 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, updateDoc, runTransaction } from 'firebase/firestore';
 import type { Vote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -48,7 +48,6 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
   const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
 
 
   const handleSafetyVote = (vote: SafetyVote) => {
@@ -61,25 +60,19 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
   
   const handleSubmit = async () => {
     if (!safetyVote || !tasteVote || !firestore || !productId) return;
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "You must be signed in to vote.",
-      });
-      return;
-    }
-
+    
+    // Use a placeholder or anonymous ID since auth is disabled
+    const userId = `anonymous_${Date.now()}`;
 
     const vibe: Vote = {
-      userId: user.uid,
+      userId: userId,
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
       createdAt: serverTimestamp(),
     };
 
     const productRef = doc(firestore, 'products', productId);
-    const voteRef = doc(collection(firestore, 'products', productId, 'votes'), user.uid); // Use user UID for vote doc ID
+    const voteRef = doc(collection(firestore, 'products', productId, 'votes'), userId); 
 
     runTransaction(firestore, async (transaction) => {
       const productDoc = await transaction.get(productRef);
@@ -205,7 +198,7 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-4">
-         <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote || !user} className="w-full">
+         <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote} className="w-full">
           Submit Vibe
         </Button>
          <Button variant="link" className="text-muted-foreground w-full">

@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { addDoc, collection, doc, getDoc, setDoc } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -16,7 +16,6 @@ import { FineTunePanel } from '@/components/dashboard/fine-tune-panel';
 export default function VibeCheckPage() {
   const params = useParams();
   const firestore = useFirestore();
-  const { user } = useUser();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,7 +144,7 @@ export default function VibeCheckPage() {
 
       {showFineTune && product && latestVote && (
         <div ref={fineTuneRef} className="mt-8 scroll-mt-8">
-          <FineTunePanel product={product} initialVote={latestVote} userId={user?.uid} />
+          <FineTunePanel product={product} initialVote={latestVote} />
         </div>
       )}
     </div>

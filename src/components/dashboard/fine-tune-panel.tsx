@@ -21,16 +21,17 @@ import { FirestorePermissionError } from '@/firebase/errors';
 interface FineTunePanelProps {
   product: Product;
   initialVote: Vote;
-  userId?: string;
 }
 
-export function FineTunePanel({ product, initialVote, userId }: FineTunePanelProps) {
+export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
   const [vibe, setVibe] = useState({
     safety: initialVote.safety,
     taste: initialVote.taste,
   });
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const userId = initialVote.userId;
 
   const handleVibeChange = (newVibe: {
     safety: number;
