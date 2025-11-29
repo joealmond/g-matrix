@@ -4,31 +4,24 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a gluten-free product with its safety and taste ratings.",
+      "description": "Represents a gluten-free product.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Product entity."
+          "description": "Unique identifier for the product."
         },
         "name": {
           "type": "string",
-          "description": "The name of the product."
+          "description": "Name of the product."
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the product."
-        },
-        "averageSafetyRating": {
-          "type": "number",
-          "description": "The average safety rating of the product, calculated from user votes."
-        },
-        "averageTasteRating": {
-          "type": "number",
-          "description": "The average taste rating of the product, calculated from user votes."
+          "description": "Description of the product."
         },
         "imageUrl": {
           "type": "string",
-          "description": "URL of the product image."
+          "description": "URL of the product image.",
+          "format": "uri"
         }
       },
       "required": [
@@ -36,182 +29,20 @@
         "name"
       ]
     },
-    "UserVote": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserVote",
-      "type": "object",
-      "description": "Represents a user's vote on a product's safety and taste.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the UserVote entity."
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N UserVote)"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N UserVote).  Note:  This is not PII because it's an anonymized identifier."
-        },
-        "safetyVote": {
-          "type": "string",
-          "description": "The user's safety vote: Clean, Sketchy, or Wrecked."
-        },
-        "tasteVote": {
-          "type": "string",
-          "description": "The user's taste vote: Yass, Meh, or Pass."
-        },
-        "voteTimestamp": {
-          "type": "string",
-          "description": "The timestamp of when the user voted.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "productId",
-        "userId",
-        "safetyVote",
-        "tasteVote",
-        "voteTimestamp"
-      ]
-    },
-    "Report": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Report",
-      "type": "object",
-      "description": "Represents a user report for a product.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Report entity."
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N Report)"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Report). Note:  This is not PII because it's an anonymized identifier."
-        },
-        "reportReason": {
-          "type": "string",
-          "description": "The reason for the report."
-        },
-        "reportTimestamp": {
-          "type": "string",
-          "description": "The timestamp of when the report was submitted.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the report: Open, Resolved, or Dismissed."
-        }
-      },
-      "required": [
-        "id",
-        "productId",
-        "userId",
-        "reportReason",
-        "reportTimestamp",
-        "status"
-      ]
-    },
-    "SearchAnalytics": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "SearchAnalytics",
-      "type": "object",
-      "description": "Represents search analytics data.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SearchAnalytics entity."
-        },
-        "searchTerm": {
-          "type": "string",
-          "description": "The search term entered by the user."
-        },
-        "searchTimestamp": {
-          "type": "string",
-          "description": "The timestamp of when the search was performed.",
-          "format": "date-time"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N SearchAnalytics).  Note:  This is not PII because it's an anonymized identifier."
-        },
-        "resultsCount": {
-          "type": "number",
-          "description": "The number of results returned for the search term."
-        }
-      },
-      "required": [
-        "id",
-        "searchTerm",
-        "searchTimestamp"
-      ]
-    },
-    "AdSlot": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdSlot",
-      "type": "object",
-      "description": "Represents an advertisement slot and its performance.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AdSlot entity."
-        },
-        "slotName": {
-          "type": "string",
-          "description": "The name or identifier of the ad slot (e.g., 'Homepage Top Banner')."
-        },
-        "adContent": {
-          "type": "string",
-          "description": "The content (e.g., HTML snippet, image URL) of the advertisement."
-        },
-        "impressions": {
-          "type": "number",
-          "description": "The number of times the ad was displayed."
-        },
-        "clicks": {
-          "type": "number",
-          "description": "The number of times the ad was clicked."
-        },
-        "ctr": {
-          "type": "number",
-          "description": "The click-through rate (clicks / impressions)."
-        }
-      },
-      "required": [
-        "id",
-        "slotName",
-        "adContent"
-      ]
-    },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the application.  Note: No authentication information is stored here.",
+      "description": "Represents a user of the application.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
+          "description": "Unique identifier for the user."
         },
         "email": {
           "type": "string",
-          "description": "The user's email address.",
+          "description": "Email address of the user.",
           "format": "email"
-        },
-        "displayName": {
-          "type": "string",
-          "description": "The user's display name."
-        },
-        "creationTimestamp": {
-          "type": "string",
-          "description": "The timestamp of when the user account was created.",
-          "format": "date-time"
         },
         "isAdmin": {
           "type": "boolean",
@@ -220,14 +51,159 @@
       },
       "required": [
         "id",
-        "email",
-        "displayName"
+        "email"
+      ]
+    },
+    "Vote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vote",
+      "type": "object",
+      "description": "Represents a user's vote on a product's safety and taste.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the vote."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product being voted on. (Relationship: Product 1:N Vote)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User casting the vote. (Relationship: User 1:N Vote)"
+        },
+        "safetyRating": {
+          "type": "number",
+          "description": "Safety rating of the product. Values can be 'Clean', 'Sketchy', 'Wrecked'."
+        },
+        "tasteRating": {
+          "type": "number",
+          "description": "Taste rating of the product. Values can be 'Yass', 'Meh', 'Pass'."
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "userId",
+        "safetyRating",
+        "tasteRating"
+      ]
+    },
+    "Report": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a user report on a product.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the report."
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to the Product being reported. (Relationship: Product 1:N Report)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User submitting the report. (Relationship: User 1:N Report)"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for reporting the product."
+        },
+        "isResolved": {
+          "type": "boolean",
+          "description": "Indicates if the report has been resolved by a moderator."
+        }
+      },
+      "required": [
+        "id",
+        "productId",
+        "userId",
+        "reason"
+      ]
+    },
+    "AdSlot": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdSlot",
+      "type": "object",
+      "description": "Represents an advertisement slot within the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ad slot."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name or identifier of the ad slot (e.g., 'Homepage Banner')."
+        },
+        "adType": {
+          "type": "string",
+          "description": "Type of advertisement (e.g., 'image', 'video')."
+        },
+        "contentUrl": {
+          "type": "string",
+          "description": "URL of the ad content.",
+          "format": "uri"
+        },
+        "clickThroughUrl": {
+          "type": "string",
+          "description": "URL to redirect to when the ad is clicked.",
+          "format": "uri"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Indicates if the ad slot is currently active."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "adType",
+        "contentUrl",
+        "clickThroughUrl"
+      ]
+    },
+    "AnalyticsEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AnalyticsEvent",
+      "type": "object",
+      "description": "Represents an analytics event tracked within the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the analytics event."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User associated with the event. (Relationship: User 1:N AnalyticsEvent)"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Type of event (e.g., 'product_search', 'vote_cast')."
+        },
+        "eventData": {
+          "type": "string",
+          "description": "Additional data associated with the event (e.g., search query, product ID)."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the event occurred.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "eventType",
+        "timestamp"
       ]
     }
   },
   "auth": {
     "providers": [
-      "google.com"
+      "password",
+      "anonymous"
     ]
   },
   "firestore": {
@@ -239,83 +215,11 @@
           "schema": {
             "$ref": "#/backend/entities/Product"
           },
-          "description": "Stores product information.",
+          "description": "Stores product information. Includes a unique product ID.",
           "params": [
             {
               "name": "productId",
-              "description": "The unique identifier for the product."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/products/{productId}/userVotes/{userVoteId}",
-        "definition": {
-          "entityName": "UserVote",
-          "schema": {
-            "$ref": "#/backend/entities/UserVote"
-          },
-          "description": "Stores user votes for a specific product. Includes denormalized 'userId' for authorization independence.",
-          "params": [
-            {
-              "name": "productId",
-              "description": "The unique identifier for the product."
-            },
-            {
-              "name": "userVoteId",
-              "description": "The unique identifier for the user vote."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/products/{productId}/reports/{reportId}",
-        "definition": {
-          "entityName": "Report",
-          "schema": {
-            "$ref": "#/backend/entities/Report"
-          },
-          "description": "Stores user reports for a specific product. Includes denormalized 'userId' for authorization independence.",
-          "params": [
-            {
-              "name": "productId",
-              "description": "The unique identifier for the product."
-            },
-            {
-              "name": "reportId",
-              "description": "The unique identifier for the report."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/searchAnalytics/{searchAnalyticsId}",
-        "definition": {
-          "entityName": "SearchAnalytics",
-          "schema": {
-            "$ref": "#/backend/entities/SearchAnalytics"
-          },
-          "description": "Stores search analytics data.",
-          "params": [
-            {
-              "name": "searchAnalyticsId",
-              "description": "The unique identifier for the search analytics data."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/adSlots/{adSlotId}",
-        "definition": {
-          "entityName": "AdSlot",
-          "schema": {
-            "$ref": "#/backend/entities/AdSlot"
-          },
-          "description": "Stores advertisement slot information. Admin only access.",
-          "params": [
-            {
-              "name": "adSlotId",
-              "description": "The unique identifier for the ad slot."
+              "description": "Unique identifier for the product."
             }
           ]
         }
@@ -327,32 +231,108 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user data.",
+          "description": "Stores user profiles. Includes user ID and email.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "Unique identifier for the user."
             }
           ]
         }
       },
       {
-        "path": "/rolesAdmin/{userId}",
+        "path": "/products/{productId}/votes/{userId}",
+        "definition": {
+          "entityName": "Vote",
+          "schema": {
+            "$ref": "#/backend/entities/Vote"
+          },
+          "description": "Stores user votes for each product. Uses a composite key of productId and userId for direct access and to ensure a user can only vote once per product.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            },
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": {
+            "$ref": "#/backend/entities/Report"
+          },
+          "description": "Stores reports for each product, created by users.  Allows moderators to review and resolve reports.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "Unique identifier for the product."
+            },
+            {
+              "name": "reportId",
+              "description": "Unique identifier for the report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/ad_slots/{adSlotId}",
+        "definition": {
+          "entityName": "AdSlot",
+          "schema": {
+            "$ref": "#/backend/entities/AdSlot"
+          },
+          "description": "Stores ad slot information.  Allows administrators to manage ads.",
+          "params": [
+            {
+              "name": "adSlotId",
+              "description": "Unique identifier for the ad slot."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/analytics_events/{eventId}",
+        "definition": {
+          "entityName": "AnalyticsEvent",
+          "schema": {
+            "$ref": "#/backend/entities/AnalyticsEvent"
+          },
+          "description": "Stores analytics events for each user. Used for tracking user activity.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            },
+            {
+              "name": "eventId",
+              "description": "Unique identifier for the analytics event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
         "definition": {
           "entityName": "User",
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores admin roles. The presence of a document indicates admin privileges.",
+          "description": "Indicates admin privileges. The existence of a document with the user's ID in this collection grants admin rights.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "Unique identifier for the user."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support the G-Matrix application's features, focusing on security, scalability, and debuggability, especially regarding user votes, reports, and search analytics. It prioritizes Authorization Independence, Clarity of Intent, DBAC, QAPs, and Invariants.\n\n*   **Products Collection:** Stores product information. No authorization concerns beyond basic read access. Public read.\n*   **Users Collection:** Stores non-PII user information. Access is limited to the user themselves (for their own document) or admins. User ID is used to reference user votes, reports and search analytics to avoid PII concerns.\n*   **UserVotes Subcollection:** Each product has a subcollection of user votes. This keeps votes related to products and allows easy aggregation of taste and safety votes through distributed counters. User ID is denormalized into each `UserVote` document to allow ownership-based security rules.\n*   **Reports Subcollection:** Each product has a subcollection of reports.  User ID is denormalized into each `Report` document to allow ownership-based security rules and to list reports created by a user.\n*   **SearchAnalytics Collection:** Stores search analytics data.  User ID is stored in each document. Collection-level security rules prevent unauthorized access. No specific ownership concerns.\n*   **AdSlots Collection:** Stores advertisement slot information. Admin only access.\n*   **RolesAdmin Collection:** Used to grant admin privileges. Existence of a document with a user's UID in this collection grants admin role.\n\n**Authorization Independence (Denormalization):**\n\n*   The `UserVote` and `Report` subcollections denormalize the `userId` attribute. This enables security rules to validate that a user can only create, modify, or delete their own votes/reports without needing to perform a `get()` operation to check the parent product.\n\n**QAPs (Rules Are Not Filters):**\n\n*   The segregation of `UserVotes` and `Reports` into subcollections, along with denormalization, enables secure `list` operations. We can list all `UserVotes` or `Reports` belonging to a specific product or created by a specific user without exposing data from other products or users.  This supports the requirement to list all reports created by a user.\n\n**Data Clarity and Predictability:**\n\n*   Explicit state modeling is used in the `Report` entity, using a `status` field to track the state of a report (Open, Resolved, Dismissed).\n\nThis structure enables robust security rules that are easy to understand and debug, aligned with the core design principles and strategy mandates."
+    "reasoning": "This Firestore structure is designed to support the G-Matrix application, emphasizing security, scalability, and ease of debugging. The core principle is **Authorization Independence**, achieved through denormalization, to avoid `get()` calls in security rules and enable atomic operations.\n\n**Products:** Products are stored in a top-level `/products` collection. Reports and votes related to a product are stored in subcollections.  This enables efficient product listing and searching.\n\n**User Data:** User profiles are stored in `/users/{userId}`. User-specific data, such as analytics events, are stored in subcollections under the user's document.\n\n**Votes:** Votes for each product are stored in a subcollection `/products/{productId}/votes/{userId}`. This allows efficient querying of votes for a specific product and avoids authorization issues.\n\n**Reports:** Product reports are stored in a subcollection `/products/{productId}/reports/{reportId}`. This keeps reports associated with their products and allows efficient retrieval for moderation. An `isResolved` field allows moderators to track the status of reports. Admins can manage these reports.\n\n**Analytics Events:** Analytics events are stored under `/users/{userId}/analytics_events/{eventId}`. This allows tracking user-specific activities.\n\n**Ad Slots:** Ad slots are stored in a top-level `/ad_slots` collection, managed by admins.\n\n**Admin Roles:** Admin privileges are determined by the existence of a document in the `/roles_admin/{userId}` collection. This simplifies admin role management and avoids custom claims.\n\n**Authorization Independence (Denormalization):** The design avoids hierarchical dependencies. For example, vote documents don't need to fetch product data to validate permissions.  All necessary context is available within the vote document itself (though in this example it is implicit via the path).\n\n**QAPs (Rules Are Not Filters):** The structure enables secure `list` operations. For example, listing votes for a product is secure because votes are stored in a subcollection of the product.  Admin roles are managed using the existence of documents in `/roles_admin/{userId}`, making it efficient to check admin privileges.\n\n**Invariants:** The structure supports ownership invariants by using path-based ownership where applicable (e.g., `/users/{userId}/analytics_events/{eventId}`). Timestamps are stored directly within the analytics events."
   }
 }
