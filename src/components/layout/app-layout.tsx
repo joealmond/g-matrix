@@ -8,12 +8,18 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isDialogOpen, setDialogOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
 
   const handleProductIdentified = (productName: string, imageUrl?: string) => {
     setDialogOpen(false);
@@ -74,7 +80,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           </Link>
           <div className="flex-1" />
            <div className="flex items-center gap-4">
-              {isSpecialPage ? (
+              {!hasMounted ? null : isSpecialPage ? (
                  <Button asChild>
                     <Link href="/">
                       <ArrowLeft className="mr-2 h-4 w-4" />
