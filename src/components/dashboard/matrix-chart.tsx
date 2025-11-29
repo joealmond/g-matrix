@@ -80,19 +80,21 @@ const CustomDot = (props: any) => {
   }
   
   return (
-    <Dot
-      cx={cx}
-      cy={cy}
-      r={isHighlighted ? 10 : 6}
-      fill={dotColor}
-      stroke={isHighlighted ? 'hsl(var(--primary-foreground))' : 'transparent'}
-      strokeWidth={isHighlighted ? 3 : 0}
-      className={cn(
-        'cursor-pointer',
-        isHighlighted ? 'animate-pulse' : '',
-        'transition-all'
-      )}
-    />
+    <g>
+       <Dot
+        cx={cx}
+        cy={cy}
+        r={isHighlighted ? 12 : 9}
+        fill={dotColor}
+        stroke={'hsl(var(--primary-foreground))'}
+        strokeWidth={isHighlighted ? 4 : 3}
+        className={cn(
+          'cursor-pointer drop-shadow-lg',
+          'transition-all'
+        )}
+      />
+      {isHighlighted && <Dot cx={cx} cy={cy} r={12} fill="transparent" stroke={dotColor} strokeWidth={2} className="animate-pulse" />}
+    </g>
   );
 };
 
