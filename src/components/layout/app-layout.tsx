@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   Upload,
-  User,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -18,11 +17,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   const handleProductIdentified = (productName: string, imageUrl?: string) => {
     setDialogOpen(false);
-    // The image URL is now a data URI, which can be very long.
-    // We can't pass it directly in the URL.
-    // A better approach in the future would be to store it temporarily
-    // or use a state management solution.
-    // For now, we'll try to pass a shortened version if possible or handle it on the product page.
     const url = `/product/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`;
     router.push(url);
   }
@@ -90,11 +84,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
                   </Button>
                 </ImageUploadDialog>
               )}
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/account">
-                <User />
-              </Link>
-            </Button>
           </div>
         </nav>
       </header>

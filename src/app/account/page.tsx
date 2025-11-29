@@ -28,7 +28,7 @@ export default function AccountPage() {
         </CardHeader>
         <CardContent>
             <div className="flex justify-center">
-               <p className="text-muted-foreground">Please sign in later.</p>
+               <p className="text-muted-foreground">Please check back later.</p>
             </div>
         </CardContent>
       </Card>
