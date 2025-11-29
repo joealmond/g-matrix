@@ -1,5 +1,4 @@
 'use server';
-import 'dotenv/config';
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
 import type { ImageAnalysisState } from '@/lib/actions-types';
