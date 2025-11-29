@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
   Scatter,
   ScatterChart,
@@ -80,22 +80,21 @@ const CustomDot = (props: any) => {
     return null;
   }
   
+  // Using foreignObject to render an HTML span, giving us more reliable styling control.
+  // The dot size is 16x16, so we offset by -8px to center it.
   return (
-    <g>
-       <Dot
-        cx={cx}
-        cy={cy}
-        r={isHighlighted ? 10 : 8}
-        strokeWidth={2}
-        stroke={'hsl(var(--primary-foreground))'}
+    <foreignObject x={cx - 8} y={cy - 8} width={isHighlighted ? 24 : 16} height={isHighlighted ? 24: 16}>
+      <div
         className={cn(
-          'cursor-pointer drop-shadow-lg',
-          'transition-all'
+          "w-4 h-4 rounded-full transition-all drop-shadow-lg",
+          isHighlighted && "ring-2 ring-offset-2 ring-offset-background"
         )}
-        style={{ fill: dotColor }}
+        style={{ 
+          backgroundColor: dotColor,
+          ringColor: dotColor
+        }}
       />
-      {isHighlighted && <Dot cx={cx} cy={cy} r={12} fill="transparent" stroke={dotColor} strokeWidth={2} className="animate-pulse" />}
-    </g>
+    </foreignObject>
   );
 };
 
@@ -267,7 +266,7 @@ export function MatrixChart({
                         highlightedProduct={highlightedProduct}
                       />
                     )}
-                    onClick={(data) => {
+                    onClick={(data, index) => {
                        onPointClick?.(data.product);
                     }}
                   />
