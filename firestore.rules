@@ -1,23 +1,178 @@
+/**
+ * This ruleset enforces a security model with distinct access levels for public
+ * users, authenticated users, and administrators. It manages a gluten-free product
+ * rating application where users can vote on and report products.
+ *
+ * Core Philosophy:
+ * The default posture is denial of access. Permissions are granted explicitly.
+ * Public users have read-only access to product data and user votes. Authenticated
+ * users can manage their own profile and create content (votes, reports, analytics).
+ * A special administrative role, granted via the `/rolesAdmin` collection, has
+ * elevated privileges to manage application-wide data like products and ad slots.
+ *
+ * Data Structure:
+ * - /products/{productId}: Publicly readable product listings.
+ *   - /userVotes/{userVoteId}: Publicly readable votes associated with a product.
+ *   - /reports/{reportId}: Private user reports for a product, readable only by the owner or admins.
+ * - /users/{userId}: Private user profile data, accessible only by the owner or admins.
+ * - /rolesAdmin/{userId}: A restricted collection where the existence of a user's UID as a document ID grants them admin privileges.
+ * - /searchAnalytics/{searchAnalyticsId}: Write-only collection for users to submit analytics data.
+ * - /adSlots/{adSlotId}: A collection for managing advertisements, accessible only by admins.
+ *
+ * Key Security Decisions:
+ * - Admin Role Management: A user is considered an administrator if a document with their UID exists in the `/rolesAdmin` collection. This provides a clear, secure, and auditable method for role management.
+ * - User Privacy: User profiles (`/users/{userId}`) are private and not listable to prevent user enumeration.
+ * - Denormalization for Authorization: User-generated content like votes and reports store a denormalized `userId` field. This allows for fast, efficient, and secure ownership checks directly within the rules without costly `get()` calls to other documents.
+ * - Flexible Data Shapes: In this prototyping stage, rules focus strictly on authorization (who can do what) and do not enforce the specific shape or data types of documents being written. This allows for rapid iteration on the client-side application.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow anyone to read and list products
+
+    // --------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------
+
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the primary function for enforcing data ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the document being accessed already exists in Firestore.
+     * CRITICAL: Must be used for all update and delete operations to prevent
+     * acting on non-existent data.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * Checks if the authenticated user has admin privileges.
+     * Admin status is granted by the existence of a document for the user
+     * in the /rolesAdmin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/rolesAdmin/$(request.auth.uid));
+    }
+
+    // --------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile data.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document for the first time.
+     * @deny (get) A regular user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if (isOwner(userId) || isAdmin()) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow delete: if (isOwner(userId) || isAdmin()) && isExistingDoc();
+    }
+
+    /**
+     * @description Manages administrator roles. Only existing admins can read or modify this collection.
+     * @path /rolesAdmin/{userId}
+     * @allow (get) An admin reading the list of other admins.
+     * @deny (create) A non-admin user trying to grant themselves admin privileges.
+     * @principle Secures administrative roles by restricting management to current administrators.
+     */
+    match /rolesAdmin/{userId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description Manages public product information. Readable by anyone, writable only by admins.
+     * @path /products/{productId}
+     * @allow (get) Any user, authenticated or not, reading a product's details.
+     * @deny (create) A regular authenticated user trying to add a new product.
+     * @principle Enforces public read access for general content while restricting modifications to trusted admins.
+     */
     match /products/{productId} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
 
-      // Allow authenticated users to create/update products and votes.
-      // This is a simplification for now. A real app would have stricter controls.
-      allow write: if request.auth != null;
+      /**
+       * @description Manages user votes for a product. Votes are publicly readable.
+       * @path /products/{productId}/userVotes/{userVoteId}
+       * @allow (create) An authenticated user submitting their own vote for a product.
+       * @deny (update) A user trying to change another user's vote.
+       * @principle Enforces document ownership for writes while allowing public reads for aggregation.
+       */
+      match /userVotes/{userVoteId} {
+        allow get: if true;
+        allow list: if true;
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(resource.data.userId) && isExistingDoc() && request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(resource.data.userId) && isExistingDoc();
+      }
 
-      match /votes/{voteId} {
-        allow read, create: if request.auth != null;
+      /**
+       * @description Manages user-submitted reports for a product. Reports are private.
+       * @path /products/{productId}/reports/{reportId}
+       * @allow (create) An authenticated user submitting a report for a product.
+       * @deny (get) A regular user trying to read a report submitted by another user.
+       * @principle Enforces strict data privacy, allowing access only to the document owner or an admin.
+       */
+      match /reports/{reportId} {
+        allow get: if isOwner(resource.data.userId) || isAdmin();
+        allow list: if isAdmin();
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if (isOwner(resource.data.userId) || isAdmin()) && isExistingDoc() && request.resource.data.userId == resource.data.userId;
+        allow delete: if (isOwner(resource.data.userId) || isAdmin()) && isExistingDoc();
       }
     }
 
-    // Default rule: block everything else
-    match /{document=**} {
-      allow read, write: if false;
+    /**
+     * @description Stores search analytics. Users can only create new entries; only admins can read.
+     * @path /searchAnalytics/{searchAnalyticsId}
+     * @allow (create) An authenticated user's client submitting a search term.
+     * @deny (get) A regular user trying to read analytics data.
+     * @principle Implements a write-only "data drop" pattern for analytics, ensuring data integrity and privacy.
+     */
+    match /searchAnalytics/{searchAnalyticsId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Stores advertisement information. This data is sensitive and only accessible by admins.
+     * @path /adSlots/{adSlotId}
+     * @allow (get, create, update, delete) An admin managing the ad slots.
+     * @deny (any) Any operation by a non-admin user.
+     * @principle Restricts access to business-critical or sensitive data to authorized admin roles.
+     */
+    match /adSlots/{adSlotId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
     }
   }
 }
