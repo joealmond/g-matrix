@@ -55,21 +55,25 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
               <div
                 className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
               >
-                {item.imageUrl && (
+                {item.imageUrl ? (
                   <Image
                     src={item.imageUrl}
                     alt={item.name}
                     fill
                     className="object-cover"
                   />
+                ) : (
+                  <div className="w-full h-full bg-muted flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground"></span>
+                  </div>
                 )}
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{item.name}</p>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Safety: {Math.round(item.avgSafety)}%</span>
+                  <span>Safety: {Math.round(item.avgSafety || 0)}%</span>
                   <span>•</span>
-                  <span>Taste: {Math.round(item.avgTaste)}%</span>
+                  <span>Taste: {Math.round(item.avgTaste || 0)}%</span>
                 </div>
               </div>
                <Button asChild variant="ghost" size="icon">

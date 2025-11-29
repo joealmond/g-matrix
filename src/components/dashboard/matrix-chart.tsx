@@ -89,10 +89,12 @@ export function MatrixChart({
   onPointClick,
 }: MatrixChartProps) {
   const isMobile = useIsMobile();
-  const showDots = chartData.length > 0;
   
-  const dataWithCoords = chartData.map(item => ({...item, taste: item.avgTaste, safety: item.avgSafety, product: item.name}));
+  const dataWithCoords = chartData
+    .filter(item => item.avgTaste !== undefined && item.avgSafety !== undefined)
+    .map(item => ({...item, taste: item.avgTaste, safety: item.avgSafety, product: item.name}));
 
+  const showDots = dataWithCoords.length > 0;
 
   return (
     <Card>

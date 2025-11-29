@@ -97,7 +97,9 @@ export default function ProductDetailsPage() {
                       />
                     </div>
                   ) : (
-                      <Skeleton className="w-full aspect-square" />
+                      <div className="w-full aspect-square bg-muted rounded-md flex items-center justify-center">
+                        <span className="text-muted-foreground">No Image</span>
+                      </div>
                   )}
               </CardContent>
           </Card>
@@ -106,34 +108,32 @@ export default function ProductDetailsPage() {
           <Card className="h-full">
             <CardHeader>
               <CardTitle className="font-headline">Overall Vibe</CardTitle>
-              <CardDescription>Based on {product.voteCount} votes.</CardDescription>
+              <CardDescription>Based on {product.voteCount || 0} votes.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="flex justify-around text-center">
                   <div>
                     <p className="text-sm text-muted-foreground">Average Safety</p>
-                    <p className="text-3xl font-bold">{Math.round(product.avgSafety)}%</p>
-                    {getRatingBadge(product.avgSafety)}
+                    <p className="text-3xl font-bold">{Math.round(product.avgSafety || 0)}%</p>
+                    {getRatingBadge(product.avgSafety || 0)}
                   </div>
                    <div>
                     <p className="text-sm text-muted-foreground">Average Taste</p>
-                    <p className="text-3xl font-bold">{Math.round(product.avgTaste)}%</p>
-                    {getRatingBadge(product.avgTaste)}
+                    <p className="text-3xl font-bold">{Math.round(product.avgTaste || 0)}%</p>
+                    {getRatingBadge(product.avgTaste || 0)}
                   </div>
                 </div>
                  <div className="relative h-[400px]">
                     <ProductVibeChart />
-                    <div
-                        className="absolute w-4 h-4 rounded-full bg-primary border-2 border-primary-foreground shadow-lg"
-                        style={{
-                          left: `calc(${product.avgTaste}% - 8px)`,
-                          top: `calc(${100 - product.avgSafety}% - 8px)`,
-                          transform: 'translate(-50%, -50%)',
-                           // Adjusting for recharts padding
-                          marginLeft: 'calc(1.5rem + (100% - 4.5rem) * 0.01 * ${product.avgTaste})',
-                          marginTop: 'calc(3.7rem + (400px - 7.2rem) * (1 - ${product.avgSafety} / 100))',
-                        }}
-                    />
+                    {product.avgTaste !== undefined && product.avgSafety !== undefined && (
+                      <div
+                          className="absolute w-4 h-4 rounded-full bg-primary border-2 border-primary-foreground shadow-lg"
+                          style={{
+                            left: `calc(${product.avgTaste}% - 8px)`,
+                            top: `calc(${100 - product.avgSafety}% - 8px)`,
+                          }}
+                      />
+                    )}
                 </div>
             </CardContent>
           </Card>
