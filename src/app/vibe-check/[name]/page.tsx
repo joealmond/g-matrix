@@ -1,21 +1,27 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useTransition } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
-import { addDoc, collection, doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { FineTunePanel } from '@/components/dashboard/fine-tune-panel';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 export default function VibeCheckPage() {
   const params = useParams();
+  const router = useRouter();
   const firestore = useFirestore();
+  const [isPending, startTransition] = useTransition();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,14 +30,17 @@ export default function VibeCheckPage() {
   const [latestVote, setLatestVote] = useState<Vote | null>(null);
   const fineTuneRef = useRef<HTMLDivElement>(null);
   
-  const decodedProductName = decodeURIComponent(params.name as string);
+  const [productName, setProductName] = useState(decodeURIComponent(params.name as string));
+  const [manualProductName, setManualProductName] = useState('');
+  
+  const isUnnamedProduct = productName === 'Unnamed Product';
 
   useEffect(() => {
     const productDataString = sessionStorage.getItem('identifiedProduct');
     if (productDataString) {
         try {
             const productData = JSON.parse(productDataString);
-            if (productData.name === decodedProductName) {
+            if (productData.name === productName) {
                 setImageUrl(productData.imageUrl);
             }
         } catch (e) {
@@ -40,10 +49,14 @@ export default function VibeCheckPage() {
     }
   
     const findOrCreateProduct = async () => {
-        if (!firestore || !decodedProductName) return;
+        if (!firestore || !productName || isUnnamedProduct) {
+          setIsLoading(false);
+          return;
+        };
+
         setIsLoading(true);
 
-        const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const productRef = doc(firestore, 'products', productId);
         
         try {
@@ -53,7 +66,7 @@ export default function VibeCheckPage() {
                 setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
             } else {
                 const newProduct: Omit<Product, 'id'> = {
-                    name: decodedProductName,
+                    name: productName,
                     imageUrl: imageUrl || 'https://placehold.co/600x400',
                     avgSafety: 0,
                     avgTaste: 0,
@@ -82,7 +95,31 @@ export default function VibeCheckPage() {
 
     findOrCreateProduct();
 
-  }, [firestore, decodedProductName, imageUrl]);
+  }, [firestore, productName, imageUrl, isUnnamedProduct]);
+  
+  const handleManualNameSubmit = () => {
+    const trimmedName = manualProductName.trim();
+    if (!trimmedName) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Name',
+        description: 'Please enter a valid product name.',
+      });
+      return;
+    }
+    
+    // Update the product name in the component state
+    setProductName(trimmedName);
+
+    // Also update sessionStorage so a refresh doesn't lose the name
+    const productData = { name: trimmedName, imageUrl };
+    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+
+    // Use router to update URL without a full page reload
+    startTransition(() => {
+      router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}`, { scroll: false });
+    });
+  };
 
   const handleVibeSubmitted = (vote: Vote) => {
     setLatestVote(vote);
@@ -107,15 +144,17 @@ export default function VibeCheckPage() {
         <div>
             <Card>
                 <CardHeader>
-                    <CardTitle className='font-headline'>{decodedProductName}</CardTitle>
-                    <CardDescription>The product identified from your image.</CardDescription>
+                    <CardTitle className='font-headline'>{productName}</CardTitle>
+                    <CardDescription>
+                      {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {imageUrl ? (
                       <div className="relative w-full aspect-square rounded-md overflow-hidden border">
                         <Image 
                           src={imageUrl} 
-                          alt={`Image of ${decodedProductName}`} 
+                          alt={`Image of ${productName}`} 
                           fill
                           style={{ objectFit: 'contain' }}
                         />
@@ -127,18 +166,39 @@ export default function VibeCheckPage() {
             </Card>
         </div>
         <div>
-            {isLoading || !product ? (
-                <Card>
-                    <CardHeader><CardTitle>Loading Vibe Panel...</CardTitle></CardHeader>
-                    <CardContent><Skeleton className="h-96 w-full" /></CardContent>
-                </Card>
-            ) : (
-                <VotingPanel 
-                  productName={product.name} 
-                  productId={product.id}
-                  onVibeSubmit={handleVibeSubmitted}
-                />
-            )}
+          {isUnnamedProduct ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline">Name This Product</CardTitle>
+                <CardDescription>Enter the product name to continue.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="product-name">Product Name</Label>
+                  <Input
+                    id="product-name"
+                    value={manualProductName}
+                    onChange={(e) => setManualProductName(e.target.value)}
+                    placeholder="e.g., Udi's Gluten Free Bread"
+                  />
+                </div>
+                <Button onClick={handleManualNameSubmit} disabled={isPending} className="w-full">
+                  {isPending ? 'Saving...' : 'Set Product Name'}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : isLoading || !product ? (
+            <Card>
+              <CardHeader><CardTitle>Loading Vibe Panel...</CardTitle></CardHeader>
+              <CardContent><Skeleton className="h-96 w-full" /></CardContent>
+            </Card>
+          ) : (
+            <VotingPanel 
+              productName={product.name} 
+              productId={product.id}
+              onVibeSubmit={handleVibeSubmitted}
+            />
+          )}
         </div>
       </div>
 

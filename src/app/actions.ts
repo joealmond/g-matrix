@@ -2,7 +2,6 @@
 import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 import { z } from 'zod';
 import type { ImageAnalysisState } from '@/lib/actions-types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -32,43 +31,38 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
     photo: formData.get('photo'),
   });
 
-  // This function is now outside the try...catch to be reusable
-  const getFallbackData = (): ImageAnalysisState => {
-    const randomImage = PlaceHolderImages[Math.floor(Math.random() * PlaceHolderImages.length)];
-    return {
-      productName: 'Unnamed Product',
-      imageUrl: randomImage.imageUrl,
-      error: null // We are treating this as a success with fallback data
-    };
-  };
-
   if (!validatedFields.success) {
-    // Even on validation failure, we can use the fallback
-    console.warn("Validation failed, using fallback.", validatedFields.error.flatten());
-    return getFallbackData();
+    return {
+      productName: null,
+      imageUrl: null,
+      error: validatedFields.error.flatten().fieldErrors.photo?.[0] ?? 'Invalid image file.',
+    };
   }
 
   const file = validatedFields.data.photo;
   
-  try {
-    // 1. Get buffer and data URI for analysis
-    const buffer = await file.arrayBuffer();
-    const base64String = Buffer.from(buffer).toString('base64');
-    const photoDataUri = `data:${file.type};base64,${base64String}`;
+  // Create the data URI regardless of the analysis outcome.
+  const buffer = await file.arrayBuffer();
+  const base64String = Buffer.from(buffer).toString('base64');
+  const photoDataUri = `data:${file.type};base64,${base64String}`;
 
-    // 2. Analyze image to get product name
+  try {
+    // Analyze image to get product name
     console.log("Starting image analysis...");
     const analysisResult = await extractProductNameFromImage({ photoDataUri });
     const productName = (analysisResult.productName || "Unnamed Product").trim();
     console.log(`Image analysis successful. Product: ${productName}`);
-
-    // For now, we will return the data URI as the image URL since we're not uploading.
-    // In a real scenario, you'd upload and get a persistent URL.
+    
     return { productName, imageUrl: photoDataUri, error: null };
 
   } catch (error: any) {
-    console.error("Full analysis/upload failed, using fallback:", JSON.stringify(error, null, 2));
-    // Instead of returning an error, we return the fallback data
-    return getFallbackData();
+    console.error("AI analysis failed, falling back to manual entry:", JSON.stringify(error, null, 2));
+    // If AI fails, we proceed with the uploaded image and a generic name.
+    // The user will be prompted to enter the name on the next screen.
+    return { 
+      productName: 'Unnamed Product', 
+      imageUrl: photoDataUri, 
+      error: null 
+    };
   }
 }
