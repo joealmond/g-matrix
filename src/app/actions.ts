@@ -7,7 +7,7 @@ import {
   uploadBytes,
   getDownloadURL,
 } from 'firebase/storage';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
@@ -81,11 +81,12 @@ export async function handleImageUpload(prevState: any, formData: FormData) {
 
     return { productName: productName, error: null };
 
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("Image analysis failed:", JSON.stringify(error, null, 2));
+    const errorMessage = error.message || 'An unexpected error occurred during image analysis.';
     return {
       productName: null,
-      error: 'An unexpected error occurred during image analysis.',
+      error: `Image analysis failed: ${errorMessage}`,
     };
   }
 }
