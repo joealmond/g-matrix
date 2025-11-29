@@ -87,7 +87,7 @@ export default function ProductDetailsPage() {
                   <CardDescription>Community-sourced vibe for this product.</CardDescription>
               </CardHeader>
               <CardContent>
-                  {product.imageUrl ? (
+                  {product?.imageUrl ? (
                     <div className="relative w-full aspect-square rounded-md overflow-hidden border">
                       <Image 
                         src={product.imageUrl} 

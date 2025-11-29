@@ -55,7 +55,7 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
               <div
                 className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
               >
-                {item.imageUrl ? (
+                {item?.imageUrl ? (
                   <Image
                     src={item.imageUrl}
                     alt={item.name}
