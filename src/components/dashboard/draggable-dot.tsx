@@ -45,7 +45,10 @@ export function DraggableDot({
       onVibeChange({ safety: newSafety, taste: newTaste });
     };
 
-    window.addEventListener('pointermove', handlePointerMove);
+    if (isDragging) {
+      window.addEventListener('pointermove', handlePointerMove);
+    }
+    
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
     };
