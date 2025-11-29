@@ -73,19 +73,18 @@ const CustomDot = (props: any) => {
   };
   
   return (
-    <g onClick={handleClick} className="cursor-pointer">
-      <foreignObject x={cx - (isHighlighted ? 12 : 8)} y={cy - (isHighlighted ? 12 : 8)} width={isHighlighted ? 24 : 16} height={isHighlighted ? 24 : 16}>
-        <div
-          className={cn(
-            "w-4 h-4 rounded-full transition-all drop-shadow-lg",
-            isHighlighted && "ring-2 ring-offset-2 ring-offset-background w-6 h-6"
-          )}
-          style={{ 
-            backgroundColor: dotColor,
-            ringColor: dotColor
-          }}
-        />
-      </foreignObject>
+     <g onClick={handleClick} className="cursor-pointer">
+      <circle
+        cx={cx}
+        cy={cy}
+        r={isHighlighted ? 10 : 6}
+        fill={dotColor}
+        className={cn(
+          "transition-all drop-shadow-lg",
+          isHighlighted && "stroke-primary-foreground/50"
+        )}
+        strokeWidth={isHighlighted ? 2 : 0}
+      />
     </g>
   );
 };
