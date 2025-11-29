@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition } from 'react';
+import { useState, useRef, useEffect, useTransition, useActionState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { analyzeAndUploadProduct } from '@/app/actions';
 import type { ImageAnalysisState } from '@/lib/actions-types';
+import { initialState } from '@/lib/actions-types';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -99,7 +100,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       const formData = new FormData();
       formData.append('image', file);
 
-      const result = await analyzeAndUploadProduct({ success: false }, formData);
+      const result = await analyzeAndUploadProduct(initialState, formData);
 
       if (result.success && result.productName && result.imageUrl) {
         if (onProductIdentified) {

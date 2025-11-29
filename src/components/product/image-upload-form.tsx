@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Terminal } from 'lucide-react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { analyzeAndUploadProduct } from '@/app/actions';
 import { initialState } from '@/lib/actions-types';
 import { useRouter } from 'next/navigation';
@@ -36,7 +37,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   
-  const [state, formAction] = useFormState(analyzeAndUploadProduct, initialState);
+  const [state, formAction] = useActionState(analyzeAndUploadProduct, initialState);
 
   useEffect(() => {
     if (state.success && state.productName && state.imageUrl) {
