@@ -91,7 +91,7 @@ service cloud.firestore {
      */
     match /products/{productId}/votes/{voteId} {
       allow get, list, create: if true;
-      allow update, delete: if isExistingOwner(resource.data.userId);
+      allow update, delete: if documentExists();
     }
 
     /**
