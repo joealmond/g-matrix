@@ -67,6 +67,10 @@ export default function ProductPage() {
       setVibe(originalVibe);
     }
   }
+  
+  const handleVibeChangeFromChart = (newVibe: { safety: number, taste: number}) => {
+    setVibe(newVibe);
+  }
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
@@ -94,7 +98,11 @@ export default function ProductPage() {
          <div className="md:col-span-3 grid gap-6 md:grid-cols-3" ref={chartRef}>
             <div className="md:col-span-2">
               <h2 className="text-2xl font-headline mb-4">Product Vibe</h2>
-              <MatrixChart chartData={chartData} highlightedProduct={productName}/>
+              <MatrixChart 
+                chartData={chartData} 
+                highlightedProduct={productName} 
+                onVibeChange={handleVibeChangeFromChart}
+              />
             </div>
             <div className="md:col-span-1">
                  <Card>
