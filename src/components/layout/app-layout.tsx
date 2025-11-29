@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState } from 'react';
+import { useUser } from '@/firebase';
 
 function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -174,6 +175,7 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 function UserLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useUser();
   const [isDialogOpen, setDialogOpen] = useState(false);
 
   const handleProductIdentified = (productName: string, imageUrl?: string) => {
@@ -183,6 +185,15 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   }
 
   const isProductPage = pathname.startsWith('/product/');
+
+  const handleScanClick = () => {
+    if (!user) {
+      router.push('/account');
+    } else {
+      setDialogOpen(true);
+    }
+  }
+
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -235,7 +246,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
                  </Button>
               ) : (
                 <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
-                  <Button>
+                  <Button onClick={handleScanClick}>
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Scan Product</span>
                   </Button>
@@ -297,7 +308,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
                  </Button>
               ) : (
               <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
-                <Button>
+                <Button onClick={handleScanClick}>
                   <Upload className="mr-2 h-4 w-4" />
                   <span>Scan Product</span>
                 </Button>
@@ -322,9 +333,12 @@ function UserLayout({ children }: { children: React.ReactNode }) {
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  if(pathname.startsWith('/admin')) {
-    return <AdminLayout>{children}</AdminLayout>
+  // This logic is a placeholder. A real app would have roles and permissions.
+  // For now, we assume if you're on a path starting with /admin, you're an admin.
+  if (pathname.startsWith('/admin')) {
+    return <AdminLayout>{children}</AdminLayout>;
   }
 
+  // Re-instating user login flow for uploads
   return <UserLayout>{children}</UserLayout>
 }

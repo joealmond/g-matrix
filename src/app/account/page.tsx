@@ -105,7 +105,7 @@ export default function AccountPage() {
                <p className="text-muted-foreground">You are not signed in.</p>
             </div>
           )}
-        </CardContent>
+        </Content>
         <CardFooter>
           {user ? (
             <Button onClick={handleSignOut} className="w-full">
@@ -116,7 +116,7 @@ export default function AccountPage() {
             <Button onClick={handleSignIn} className="w-full">
               <LogIn className="mr-2" />
               Sign In with Google
-            </Button>
+            </Button>          
           )}
         </CardFooter>
       </Card>

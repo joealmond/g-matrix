@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useActionState, useEffect } from 'react';
+import { useRef, useActionState, useEffect, useState } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
 import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
@@ -11,8 +11,6 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
-
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -25,6 +23,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (isProcessing) return;
@@ -35,6 +34,9 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         title: "Action Error",
         description: state.error,
       });
+      // Reset the form state on error so the user can try again
+      formRef.current?.reset();
+      setPreview(null);
       return;
     }
 
@@ -102,7 +104,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const buttonText = isProcessing ? 'Processing...' : 'Analyze Image';
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form ref={formRef} action={formAction} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div
@@ -132,6 +134,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             ref={fileInputRef}
             className="sr-only"
             required
+            disabled={isProcessing}
           />
         </div>
       </div>
@@ -142,7 +145,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={isProcessing || !fileInputRef.current?.files?.length} className="w-full">
+      <Button type="submit" disabled={isProcessing || !preview} className="w-full">
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {buttonText}
       </Button>
