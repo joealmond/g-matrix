@@ -2,7 +2,6 @@
 
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
@@ -89,11 +88,10 @@ export default function ProductDetailsPage() {
               <CardContent>
                   {product?.imageUrl ? (
                     <div className="relative w-full aspect-square rounded-md overflow-hidden border">
-                      <Image 
+                      <img 
                         src={product.imageUrl} 
                         alt={`Image of ${product.name}`} 
-                        fill
-                        className="object-contain"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : (

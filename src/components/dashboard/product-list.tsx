@@ -8,7 +8,6 @@ import {
 import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '../ui/button';
 import { ArrowRight } from 'lucide-react';
@@ -56,11 +55,10 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
                 className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
               >
                 {item?.imageUrl ? (
-                  <Image
+                  <img
                     src={item.imageUrl}
                     alt={item.name}
-                    fill
-                    className="object-cover"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-muted flex items-center justify-center">

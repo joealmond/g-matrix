@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Image from 'next/image';
 import { useEffect, useState, useRef, useTransition } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -152,11 +151,10 @@ export default function VibeCheckPage() {
                 <CardContent>
                     {imageUrl ? (
                       <div className="relative w-full aspect-square rounded-md overflow-hidden border">
-                        <Image 
+                        <img 
                           src={imageUrl} 
                           alt={`Image of ${productName}`} 
-                          fill
-                          style={{ objectFit: 'contain' }}
+                          className="w-full h-full object-contain"
                         />
                       </div>
                     ) : (
