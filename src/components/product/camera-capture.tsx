@@ -83,9 +83,19 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   }, [state.productName, onProductIdentified]);
 
   const handleCapture = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (video && canvas) {
+      // Ensure video has dimensions before capturing
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.error("Video dimensions are not available yet.");
+        toast({
+            variant: 'destructive',
+            title: 'Capture Failed',
+            description: 'Could not capture image. Please try again.',
+        });
+        return;
+      }
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
