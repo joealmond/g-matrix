@@ -8,14 +8,13 @@ service cloud.firestore {
     }
 
     // Allow anyone to read the list of products
-    match /products {
-      allow list: if true;
-    }
-
-    // Allow anyone to read individual products, but only logged-in users can create/update
     match /products/{productId} {
       allow get: if true;
       allow create, update: if request.auth != null;
+    }
+
+    match /products {
+       allow list: if true;
     }
 
     // Allow authenticated users to create votes
