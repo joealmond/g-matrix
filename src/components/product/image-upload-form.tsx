@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useActionState, useEffect } from 'react';
+import { useRef, useActionState, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
 import { initialState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -19,16 +21,13 @@ type ImageUploadFormProps = {
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
-
   const [state, formAction, isProcessing] = useActionState(handleImageAnalysis, initialState);
-
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isProcessing) return; // Don't do anything while action is running
+    if (isProcessing) return;
 
     if (state.error) {
       toast({
@@ -56,7 +55,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {
-      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -64,7 +62,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
       reader.readAsDataURL(file);
     } else {
       setPreview(null);
-      setSelectedFile(null);
     }
   };
 
@@ -94,12 +91,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    handleFile(file);
     if (fileInputRef.current) {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInputRef.current.files = dataTransfer.files;
     }
+    handleFile(file);
   };
   
   const buttonText = isProcessing ? 'Processing...' : 'Analyze Image';
@@ -145,7 +142,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         </div>
       )}
 
-      <Button type="submit" disabled={isProcessing || !selectedFile} className="w-full">
+      <Button type="submit" disabled={isProcessing || !fileInputRef.current?.files?.length} className="w-full">
         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {buttonText}
       </Button>

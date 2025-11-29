@@ -27,22 +27,35 @@ const formSchema = z.object({
     ),
 });
 
-// Initialize Firebase Admin SDK
+// Safely initialize Firebase Admin SDK
 if (!admin.apps.length) {
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    });
-    console.log("Firebase Admin SDK initialized.");
-  } catch (e: any) {
-    console.error("Failed to initialize Firebase Admin SDK:", e.message);
+  const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (serviceAccountKey) {
+    try {
+      const serviceAccount = JSON.parse(serviceAccountKey);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      });
+      console.log("Firebase Admin SDK initialized successfully.");
+    } catch (e: any) {
+      console.error("Error parsing FIREBASE_SERVICE_ACCOUNT_KEY or initializing Firebase Admin SDK:", e.message);
+    }
+  } else {
+    console.warn("FIREBASE_SERVICE_ACCOUNT_KEY is not set. Firebase Admin SDK not initialized.");
   }
 }
 
 
 export async function handleImageAnalysis(prevState: any, formData: FormData): Promise<ImageAnalysisState> {
+   if (!admin.apps.length) {
+    return {
+      productName: null,
+      imageUrl: null,
+      error: "Server configuration error: Firebase Admin SDK not initialized.",
+    };
+  }
+
   const validatedFields = formSchema.safeParse({
     photo: formData.get('photo'),
   });

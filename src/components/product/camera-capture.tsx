@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { handleImageAnalysis } from '@/app/actions';
 import { initialState, type ImageAnalysisState } from '@/lib/actions-types';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useActionState } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -25,6 +26,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -68,7 +70,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   }, [toast]);
   
    useEffect(() => {
-    if (isProcessing) return; // Don't do anything while action is running
+    if (isProcessing) return; 
 
     if (state.error) {
         toast({
@@ -114,8 +116,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
         const dataUri = canvas.toDataURL('image/png');
         setCapturedImage(dataUri);
-        const file = dataURLtoFile(dataUri, 'capture.png');
-        setCapturedFile(file);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], "capture.png", { type: "image/png" });
+            setCapturedFile(file);
+          }
+        }, 'image/png');
       }
     }
   };
@@ -138,21 +144,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     const formData = new FormData(e.currentTarget);
     formData.set('photo', capturedFile);
     formAction(formData);
-  };
-
-  const dataURLtoFile = (dataurl: string, filename: string): File | null => {
-    const arr = dataurl.split(',');
-    if (arr.length < 2) return null;
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) return null;
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
   };
 
   if (hasCameraPermission === null) {
@@ -179,9 +170,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const buttonText = isProcessing ? 'Processing...' : 'Analyze Captured Image';
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-       {/* This input is not used for submission data, but prevents form handler errors */}
-      <input type="file" name="photo" className="hidden" />
+    <form ref={formRef} action={formAction} onSubmit={handleSubmit} className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
