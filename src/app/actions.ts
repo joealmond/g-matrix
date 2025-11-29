@@ -36,7 +36,9 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash', {
+        apiKey: process.env.GEMINI_API_KEY,
+      }),
       schema: AnalysisSchema,
       messages: [
         {
