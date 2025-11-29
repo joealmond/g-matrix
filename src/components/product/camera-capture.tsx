@@ -1,0 +1,195 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
+import { handleImageUpload } from '@/app/actions';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending} className="w-full">
+      {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {pending ? 'Analyzing...' : 'Analyze Captured Image'}
+    </Button>
+  );
+}
+
+export function CameraCapture() {
+  const [state, formAction] = useActionState(handleImageUpload, {
+    productName: null,
+    error: null,
+  });
+
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const getCameraPermission = async () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          setHasCameraPermission(true);
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        } catch (error) {
+          console.error('Error accessing camera:', error);
+          setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Access Denied',
+            description:
+              'Please enable camera permissions in your browser settings.',
+          });
+        }
+      } else {
+        setHasCameraPermission(false);
+        toast({
+          variant: 'destructive',
+          title: 'Camera Not Supported',
+          description: 'Your browser does not support camera access.',
+        });
+      }
+    };
+
+    getCameraPermission();
+
+    return () => {
+      // Cleanup: stop the stream when component unmounts or dialog closes
+      if (videoRef.current && videoRef.current.srcObject) {
+        (videoRef.current.srcObject as MediaStream)
+          .getTracks()
+          .forEach(track => track.stop());
+      }
+    };
+  }, [toast]);
+
+  const handleCapture = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (context) {
+        context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+        const dataUri = canvas.toDataURL('image/png');
+        setCapturedImage(dataUri);
+      }
+    }
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+  };
+
+  const dataURLtoFile = (dataurl: string, filename: string) => {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (capturedImage) {
+      const file = dataURLtoFile(capturedImage, 'capture.png');
+      if (file) {
+        const formData = new FormData();
+        formData.append('photo', file);
+        formAction(formData);
+      }
+    }
+  };
+
+  if (hasCameraPermission === null) {
+     return <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>
+  }
+  
+  if (hasCameraPermission === false) {
+    return (
+        <Alert variant="destructive">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Camera Access Required</AlertTitle>
+            <AlertDescription>
+                Please allow camera access to use this feature. You may need to
+                refresh the page after granting permissions.
+            </AlertDescription>
+        </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {!capturedImage ? (
+        <div className="space-y-4">
+          <div className="relative w-full overflow-hidden rounded-md border">
+            <video
+              ref={videoRef}
+              className="w-full aspect-video rounded-md"
+              autoPlay
+              muted
+              playsInline
+            />
+          </div>
+          <Button onClick={handleCapture} className="w-full">
+            <Camera className="mr-2 h-4 w-4" />
+            Capture Photo
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative w-full overflow-hidden rounded-md border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={capturedImage} alt="Captured" className="w-full" />
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleRetake} type="button">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retake
+            </Button>
+            <SubmitButton />
+          </div>
+        </form>
+      )}
+
+      {state.productName && (
+        <Alert>
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Product Identified!</AlertTitle>
+          <AlertDescription>
+            We think this is:{' '}
+            <span className="font-bold">{state.productName}</span>. You can now
+            search for it.
+          </AlertDescription>
+        </Alert>
+      )}
+      {state.error && (
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{state.error}</AlertDescription>
+        </Alert>
+      )}
+    </div>
+  );
+}
