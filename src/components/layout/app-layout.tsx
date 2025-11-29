@@ -186,7 +186,7 @@ function UserLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 z-40">
-        <nav className="flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 w-full">
+        <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6 w-full">
           <Link
             href="/"
             className="flex items-center gap-2 text-lg font-semibold md:text-base"
@@ -241,6 +241,68 @@ function UserLayout({ children }: { children: React.ReactNode }) {
                 </ImageUploadDialog>
               )}
             <Button variant="ghost" size="icon" asChild>
+              <Link href="/account">
+                <User />
+              </Link>
+            </Button>
+          </div>
+        </nav>
+        {/* Mobile Nav */}
+         <nav className="flex md:hidden items-center w-full">
+           <Link
+            href="/"
+            className="flex items-center gap-2 text-lg font-semibold"
+          >
+             <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="text-primary h-6 w-6"
+              >
+                <path
+                  d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M2 7L12 12L22 7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M12 12V22"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            <span className="sr-only">G-Matrix</span>
+          </Link>
+          <div className="flex-1" />
+           <div className="flex items-center gap-4">
+            {isProductPage ? (
+                 <Button asChild>
+                    <Link href="/">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Back to Home
+                    </Link>
+                 </Button>
+              ) : (
+              <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen} onProductIdentified={handleProductIdentified}>
+                <Button>
+                  <Upload className="mr-2 h-4 w-4" />
+                  <span>Scan Product</span>
+                </Button>
+              </ImageUploadDialog>
+            )}
+             <Button variant="ghost" size="icon" asChild>
               <Link href="/account">
                 <User />
               </Link>
