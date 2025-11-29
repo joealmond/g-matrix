@@ -35,10 +35,11 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    let stream: MediaStream | null = null;
     const getCameraPermission = async () => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia({
+          stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'environment' },
           });
           setHasCameraPermission(true);
@@ -69,10 +70,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
     return () => {
       // Cleanup: stop the stream when component unmounts or dialog closes
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
-          .getTracks()
-          .forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
       }
     };
   }, [toast]);
@@ -181,7 +180,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
         </form>
       )}
       
-      {/* Visual feedback is now inside the dialog and handled by redirection */}
       {state.error && (
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
