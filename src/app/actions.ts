@@ -50,7 +50,7 @@ export async function handleImageAnalysis(prevState: any, formData: FormData): P
     // 2. Analyze image to get product name
     console.log("Starting image analysis...");
     const analysisResult = await extractProductNameFromImage({ photoDataUri });
-    const productName = analysisResult.productName || "Unnamed Product";
+    const productName = (analysisResult.productName || "Unnamed Product").trim();
     console.log(`Image analysis successful. Product: ${productName}`);
 
     // For now, we will return the data URI as the image URL since we're not uploading.
