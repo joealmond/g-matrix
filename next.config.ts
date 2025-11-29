@@ -1,10 +1,5 @@
 import type { NextConfig } from 'next';
 
-// Load environment variables from .env file in development
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
-
 const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
