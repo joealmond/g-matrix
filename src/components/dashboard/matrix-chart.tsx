@@ -60,7 +60,7 @@ type MatrixChartProps = {
 };
 
 const CustomDot = (props: any) => {
-  const { cx, cy, payload, onPointClick, highlightedProduct } = props;
+  const { cx, cy, payload, onPointClick, highlightedProduct, fill } = props;
 
   if (isNaN(cx) || isNaN(cy)) {
     return null;
@@ -69,12 +69,12 @@ const CustomDot = (props: any) => {
   const isHighlighted = highlightedProduct === payload.product;
 
   return (
-    <Dot
+    <circle
       cx={cx}
       cy={cy}
       r={isHighlighted ? 10 : 6}
-      fill={props.fill}
-      stroke={isHighlighted ? 'hsl(var(--card))' : 'hsl(var(--card))'}
+      fill={fill}
+      stroke={isHighlighted ? 'hsl(var(--card))' : 'transparent'}
       strokeWidth={2}
       onClick={() => onPointClick?.(payload.product)}
       className="cursor-pointer transition-all"
