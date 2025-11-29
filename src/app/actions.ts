@@ -25,6 +25,12 @@ export async function analyzeAndUploadProduct(
     const file = formData.get('image') as File;
     const userId = 'anonymous'; // Optional tracking
 
+    // 1. Safety Check for API Key
+    const apiKey = process.env.GENAI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing API Key in .env.local");
+    }
+
     if (!file || file.size === 0) {
       return { success: false, error: 'No image file provided' };
     }
@@ -37,7 +43,7 @@ export async function analyzeAndUploadProduct(
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
       model: google('gemini-1.5-flash', {
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: apiKey, // Use the detected key
       }),
       schema: AnalysisSchema,
       messages: [
@@ -67,6 +73,7 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
     const productName = analysis.productName || 'Unnamed Product';
+    // Create a simpler ID (remove spaces, lowercase)
     const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const productRef = adminDb.collection('products').doc(productId);
 
@@ -76,6 +83,14 @@ export async function analyzeAndUploadProduct(
       await productRef.set({
         name: productName,
         imageUrl: publicUrl,
+        // --- FIX: SAVE THE AI DATA HERE ---
+        aiAnalysis: {
+          isGlutenFree: analysis.isLikelyGlutenFree,
+          riskLevel: analysis.riskLevel,
+          reasoning: analysis.reasoning,
+          tags: analysis.tags
+        },
+        // ----------------------------------
         avgSafety: 50,
         avgTaste: 50,
         voteCount: 0,
