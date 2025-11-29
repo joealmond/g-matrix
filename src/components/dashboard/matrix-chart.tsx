@@ -74,13 +74,18 @@ const CustomDot = (props: any) => {
   const isHighlighted = highlightedProduct === payload.product;
   const dotColor = chartColors[index % chartColors.length];
 
+  // This prevents rendering if the coordinates are invalid, which can happen during chart initialization.
+  if (isNaN(cx) || isNaN(cy)) {
+    return null;
+  }
+  
   return (
     <Dot
       cx={cx}
       cy={cy}
       r={isHighlighted ? 10 : 6}
       fill={dotColor}
-      stroke={isHighlighted ? 'white' : 'transparent'}
+      stroke={isHighlighted ? 'hsl(var(--primary-foreground))' : 'transparent'}
       strokeWidth={isHighlighted ? 3 : 0}
       className={cn(
         'cursor-pointer',
