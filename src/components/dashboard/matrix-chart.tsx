@@ -60,9 +60,8 @@ type MatrixChartProps = {
 };
 
 const CustomDot = (props: any) => {
-  const { cx, cy, payload, index, highlightedProduct, onPointClick } = props;
+  const { cx, cy, payload, highlightedProduct, onPointClick } = props;
   const isHighlighted = highlightedProduct === payload.product;
-  const dotColor = chartColors[index % chartColors.length];
 
   if (isNaN(cx) || isNaN(cy)) {
     return null;
@@ -78,7 +77,7 @@ const CustomDot = (props: any) => {
         cx={cx}
         cy={cy}
         r={isHighlighted ? 10 : 6}
-        fill={dotColor}
+        fill="currentColor"
         className={cn(
           "transition-all drop-shadow-lg",
           isHighlighted && "stroke-primary-foreground/50"
@@ -219,13 +218,9 @@ export function MatrixChart({
                       labelKey="product"
                       nameKey="product"
                       formatter={(value, name, props) => {
-                        const itemIndex = chartData.findIndex(d => d.product === props.payload.product);
-                        if (itemIndex === -1) return [value, name];
-                        const color = chartColors[itemIndex % chartColors.length];
-
                         if (name === 'product') {
                           return (
-                            <span className="font-bold" style={{ color }}>
+                            <span className="font-bold" style={{ color: props.color }}>
                               {value}
                             </span>
                           );
@@ -241,19 +236,22 @@ export function MatrixChart({
                   }
                 />
                 <ZAxis dataKey="product" name="product" />
-                {showDots && (
-                  <Scatter
-                    name="Products"
-                    data={chartData}
-                    shape={(props) => (
-                      <CustomDot
-                        {...props}
-                        highlightedProduct={highlightedProduct}
-                        onPointClick={onPointClick}
-                      />
-                    )}
-                  />
-                )}
+                {showDots &&
+                  chartData.map((item, index) => (
+                    <Scatter
+                      key={item.product}
+                      name={item.product}
+                      data={[item]}
+                      fill={chartColors[index % chartColors.length]}
+                      shape={(props) => (
+                        <CustomDot
+                          {...props}
+                          highlightedProduct={highlightedProduct}
+                          onPointClick={onPointClick}
+                        />
+                      )}
+                    />
+                  ))}
               </ScatterChart>
             </ResponsiveContainer>
           </ChartContainer>
