@@ -4,21 +4,33 @@ import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { TrendingFoods } from '@/components/dashboard/trending-foods';
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Save, Undo } from 'lucide-react';
+import { Save, Undo, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { DraggableDot } from '@/components/dashboard/draggable-dot';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
+import { useDoc } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import type { Product, Vote } from '@/lib/types';
 
 export default function ProductPage() {
   const params = useParams();
   const { toast } = useToast();
+  const firestore = useFirestore();
   
   const initialProductName = decodeURIComponent(params.name as string);
+
+  const productDocRef = useMemo(() => {
+    if (!firestore || !initialProductName) return null;
+    return doc(firestore, 'products', initialProductName);
+  }, [firestore, initialProductName]);
+
+  const { data: product, loading } = useDoc<Product>(productDocRef);
   
   const [originalVibe, setOriginalVibe] = useState<{ safety: number; taste: number } | null>(null);
   const [originalProductName, setOriginalProductName] = useState(initialProductName);
@@ -30,13 +42,24 @@ export default function ProductPage() {
   
   const chartRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (product) {
+      const initialVibe = { safety: product.avgSafety, taste: product.avgTaste };
+       if (!vibe) { // Only set initial vibe if it hasn't been set by voting
+         setVibe(initialVibe);
+         setOriginalVibe(initialVibe);
+         setShowChart(true);
+       }
+    }
+  }, [product, vibe]);
+
   const isChanged = originalVibe && vibe && (
     productName !== originalProductName ||
     vibe.safety !== originalVibe.safety ||
     vibe.taste !== originalVibe.taste
   );
 
-  const handleVibeSubmit = (submittedVibe: { safety: number, taste: number}) => {
+  const handleVibeSubmit = (submittedVibe: Vote) => {
     setVibe(submittedVibe);
     setOriginalVibe(submittedVibe); 
     setShowChart(true);
@@ -45,14 +68,43 @@ export default function ProductPage() {
     }, 100);
   };
 
-  const handleSaveEdit = () => {
-    toast({
-        title: "Vibe Updated!",
-        description: `Your fine-tuned vibe for ${productName} has been saved.`,
-    });
-    setOriginalProductName(productName);
-    if(vibe) {
+  const handleSaveEdit = async () => {
+    if (!firestore || !vibe || !product) return;
+
+    try {
+      const voteRef = doc(collection(firestore, 'products', product.id, 'votes'));
+      await setDoc(voteRef, {
+        safety: vibe.safety,
+        taste: vibe.taste,
+        createdAt: serverTimestamp(),
+      });
+      
+      // In a real app, you would have a cloud function to recalculate the average
+      // For now, we simulate an update.
+      const newVoteCount = (product.voteCount || 0) + 1;
+      const newAvgSafety = ((product.avgSafety * (product.voteCount || 0)) + vibe.safety) / newVoteCount;
+      const newAvgTaste = ((product.avgTaste * (product.voteCount || 0)) + vibe.taste) / newVoteCount;
+      
+      await updateDoc(productDocRef, {
+        avgSafety: newAvgSafety,
+        avgTaste: newAvgTaste,
+        voteCount: newVoteCount
+      });
+
+
+      toast({
+          title: "Vibe Updated!",
+          description: `Your fine-tuned vibe for ${productName} has been saved.`,
+      });
+      setOriginalProductName(productName);
       setOriginalVibe(vibe);
+    } catch (error) {
+      console.error("Error saving vibe:", error);
+       toast({
+          variant: "destructive",
+          title: "Uh oh!",
+          description: "Could not save your updated vibe.",
+      });
     }
   }
   
@@ -67,16 +119,33 @@ export default function ProductPage() {
     setVibe(newVibe);
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!product) {
+     return (
+      <div className="text-center">
+        <h1 className="font-headline text-3xl">Product not found</h1>
+        <p className="text-muted-foreground">This product doesn't seem to exist in our database yet.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 md:grid-cols-3">
        <div className="md:col-span-3 flex items-center justify-between">
             <h1 className="font-headline text-3xl">
-              Rate: {initialProductName}
+              Rate: {product.name}
             </h1>
         </div>
 
       <div className="md:col-span-2 space-y-6">
-        <VotingPanel productName={productName} onVibeSubmit={handleVibeSubmit} />
+        <VotingPanel productName={productName} onVibeSubmit={handleVibeSubmit} productId={product.id} />
       </div>
       <div className="md:col-span-1 space-y-6">
         <TrendingFoods />
@@ -106,6 +175,7 @@ export default function ProductPage() {
                                 id="productName" 
                                 value={productName} 
                                 onChange={(e) => setProductName(e.target.value)}
+                                disabled // Disabling name changes for now
                             />
                         </div>
                        <div className="space-y-2">

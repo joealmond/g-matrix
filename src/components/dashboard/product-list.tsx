@@ -5,48 +5,78 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { chartColors } from './matrix-chart';
 import { cn } from '@/lib/utils';
+import type { Product } from '@/lib/types';
+import { Skeleton } from '../ui/skeleton';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Button } from '../ui/button';
+import { ArrowRight } from 'lucide-react';
 
 type ProductListProps = {
-  chartData: { product: string; safety: number; taste: number }[];
+  chartData: Product[];
   onItemClick?: (productName: string) => void;
   highlightedProduct?: string | null;
+  loading: boolean;
 };
 
-export function ProductList({ chartData, onItemClick, highlightedProduct }: ProductListProps) {
+export function ProductList({ chartData, onItemClick, highlightedProduct, loading }: ProductListProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Product Details</CardTitle>
       </CardHeader>
       <CardContent>
-        <ul className="space-y-4">
-          {chartData.map((item, index) => (
+        {loading && (
+          <ul className="space-y-4">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </ul>
+        )}
+        {!loading && chartData.length === 0 && (
+            <div className="text-center text-muted-foreground py-8">
+                <p>No products found.</p>
+                <p className="text-sm">Scan a product to get started!</p>
+            </div>
+        )}
+        <ul className="space-y-2">
+          {chartData.map((item) => (
             <li
-              key={item.product}
-              id={`product-item-${item.product}`}
-              onClick={() => onItemClick?.(item.product)}
+              key={item.id}
+              id={`product-item-${item.name}`}
+              onClick={() => onItemClick?.(item.name)}
               className={cn(
                 "flex items-center gap-4 p-2 rounded-md transition-all scroll-mt-20 cursor-pointer",
-                highlightedProduct === item.product ? 'bg-muted ring-2 ring-primary' : 'hover:bg-muted'
+                highlightedProduct === item.name ? 'bg-muted ring-2 ring-primary' : 'hover:bg-muted'
               )}
               style={{scrollMarginTop: '80px'}} // For smooth scroll offset
             >
-              <span
-                className="h-4 w-4 rounded-full"
-                style={{
-                  backgroundColor: chartColors[index % chartColors.length],
-                }}
-              />
+              <div
+                className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
+              >
+                {item.imageUrl && (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                  />
+                )}
+              </div>
               <div className="flex-1">
-                <p className="font-semibold">{item.product}</p>
+                <p className="font-semibold">{item.name}</p>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Safety: {item.safety}%</span>
+                  <span>Safety: {Math.round(item.avgSafety)}%</span>
                   <span>•</span>
-                  <span>Taste: {item.taste}%</span>
+                  <span>Taste: {Math.round(item.avgTaste)}%</span>
                 </div>
               </div>
+               <Button asChild variant="ghost" size="icon">
+                  <Link href={`/product/${item.name}`}>
+                    <ArrowRight />
+                  </Link>
+                </Button>
             </li>
           ))}
         </ul>

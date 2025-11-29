@@ -17,6 +17,9 @@ import {
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp, updateDoc, runTransaction } from 'firebase/firestore';
+import type { Vote } from '@/lib/types';
 
 
 const FireIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M14.5 9.5c0 .938-.443 1.75-1.125 2.25-.682.5-1.125 1.5-1.125 2.25M12 7.5c0 1.5-1 3-2 3s-2-1.5-2-3c0-1.5 1-3 2-3s2 1.5 2 3z"/><path d="M10.5 15.5c-1.5-1-2.5-2.5-2.5-4.5 0-2.5 2-5 5-5s5 2.5 5 5c0 2-1 3.5-2.5 4.5"/><path d="M12.5 18.5c-1.294-.97-2-2.36-2-3.5h-1c0 1.5.706 2.53 2 3.5s2 1.5 2 2.5c0 .5-.5 1-1 1s-1-.5-1-1c0-.5.5-1 1-1h1c0 1.105-1.119 2-2.5 2S9.5 21.605 9.5 20.5s1.119-2 2.5-2 2.5.895 2.5 2z"/></svg>;
@@ -34,13 +37,15 @@ const voteMapping = {
 
 interface VotingPanelProps {
   productName: string;
-  onVibeSubmit?: (vibe: { safety: number; taste: number }) => void;
+  productId: string;
+  onVibeSubmit?: (vibe: Vote) => void;
 }
 
-export function VotingPanel({ productName, onVibeSubmit }: VotingPanelProps) {
+export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPanelProps) {
   const [safetyVote, setSafetyVote] = useState<SafetyVote | null>(null);
   const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
 
   const handleSafetyVote = (vote: SafetyVote) => {
@@ -51,28 +56,59 @@ export function VotingPanel({ productName, onVibeSubmit }: VotingPanelProps) {
     setTasteVote(current => (current === vote ? null : vote));
   };
   
-  const handleSubmit = () => {
-    if (!safetyVote || !tasteVote) return;
+  const handleSubmit = async () => {
+    if (!safetyVote || !tasteVote || !firestore || !productId) return;
 
-    const vibe = {
+    const vibe: Vote = {
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
+      createdAt: serverTimestamp(),
     };
 
-    console.log({
-      productName,
-      safetyVote,
-      tasteVote,
-      vibe,
-    });
+    try {
+      const productRef = doc(firestore, 'products', productId);
+      const voteRef = doc(collection(firestore, 'products', productId, 'votes'));
 
-    toast({
-        title: "Vibe Submitted!",
-        description: `Your vibe for ${productName} has been recorded. Now you can fine-tune it.`,
-    })
+      // Use a transaction to update the product averages atomically
+      await runTransaction(firestore, async (transaction) => {
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) {
+          throw "Product does not exist!";
+        }
 
-    if (onVibeSubmit) {
-      onVibeSubmit(vibe);
+        const productData = productDoc.data();
+        const oldVoteCount = productData.voteCount || 0;
+        const oldAvgSafety = productData.avgSafety || 0;
+        const oldAvgTaste = productData.avgTaste || 0;
+
+        const newVoteCount = oldVoteCount + 1;
+        const newAvgSafety = ((oldAvgSafety * oldVoteCount) + vibe.safety) / newVoteCount;
+        const newAvgTaste = ((oldAvgTaste * oldVoteCount) + vibe.taste) / newVoteCount;
+
+        transaction.set(voteRef, vibe);
+        transaction.update(productRef, {
+          voteCount: newVoteCount,
+          avgSafety: newAvgSafety,
+          avgTaste: newAvgTaste,
+        });
+      });
+
+
+      toast({
+          title: "Vibe Submitted!",
+          description: `Your vibe for ${productName} has been recorded. Now you can fine-tune it.`,
+      })
+
+      if (onVibeSubmit) {
+        onVibeSubmit(vibe as Vote);
+      }
+    } catch(e) {
+      console.error(e);
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: "Could not submit your vibe.",
+      })
     }
   }
 

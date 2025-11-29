@@ -13,7 +13,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
-import React from 'react';
+import type { Product } from '@/lib/types';
 import {
   Scatter,
   ScatterChart,
@@ -24,7 +24,6 @@ import {
   ResponsiveContainer,
   ReferenceArea,
   ZAxis,
-  Dot,
 } from 'recharts';
 
 export const chartColors = [
@@ -54,7 +53,7 @@ const chartConfig = {
 };
 
 type MatrixChartProps = {
-  chartData: { product: string; safety: number; taste: number }[];
+  chartData: Product[];
   highlightedProduct?: string | null;
   onPointClick?: (productName: string) => void;
 };
@@ -66,7 +65,7 @@ const CustomDot = (props: any) => {
     return null;
   }
 
-  const isHighlighted = highlightedProduct === payload.product;
+  const isHighlighted = highlightedProduct === payload.name;
 
   return (
     <circle
@@ -76,8 +75,9 @@ const CustomDot = (props: any) => {
       fill={fill}
       stroke={isHighlighted ? 'hsl(var(--card))' : 'transparent'}
       strokeWidth={2}
-      onClick={() => onPointClick?.(payload.product)}
+      onClick={() => onPointClick?.(payload.name)}
       className="cursor-pointer transition-all"
+      style={{ filter: `drop-shadow(0 2px 4px ${fill}A0)` }}
     />
   );
 };
@@ -90,6 +90,9 @@ export function MatrixChart({
 }: MatrixChartProps) {
   const isMobile = useIsMobile();
   const showDots = chartData.length > 0;
+  
+  const dataWithCoords = chartData.map(item => ({...item, taste: item.avgTaste, safety: item.avgSafety, product: item.name}));
+
 
   return (
     <Card>
@@ -233,7 +236,7 @@ export function MatrixChart({
                 />
                 <ZAxis dataKey="product" name="product" />
                 {showDots &&
-                  chartData.map((item, index) => (
+                  dataWithCoords.map((item, index) => (
                     <Scatter
                       key={item.product}
                       data={[item]}

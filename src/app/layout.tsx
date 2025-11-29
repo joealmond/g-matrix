@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'G-Matrix: Gluten-Free Vibe Check',
@@ -29,7 +30,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppLayout>{children}</AppLayout>
+        <FirebaseClientProvider>
+          <AppLayout>{children}</AppLayout>
+        </FirebaseClientProvider>
         <Toaster />
       </body>
     </html>
