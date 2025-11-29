@@ -20,7 +20,6 @@ export default function ProductPage() {
   
   const initialProductName = decodeURIComponent(params.name as string);
   
-  // These will be null until a vibe is submitted for the first time
   const [originalVibe, setOriginalVibe] = useState<{ safety: number; taste: number } | null>(null);
   const [originalProductName, setOriginalProductName] = useState(initialProductName);
 
@@ -38,7 +37,6 @@ export default function ProductPage() {
   );
 
   const handleVibeSubmit = (submittedVibe: { safety: number, taste: number}) => {
-    // Set both the current and original vibe to the newly submitted values
     setVibe(submittedVibe);
     setOriginalVibe(submittedVibe); 
     setShowChart(true);
@@ -54,7 +52,6 @@ export default function ProductPage() {
         title: "Vibe Updated!",
         description: `Your fine-tuned vibe for ${productName} has been saved.`,
     });
-    // Persist the new values as the original ones
     setOriginalProductName(productName);
     if(vibe) {
       setOriginalVibe(vibe);
@@ -74,19 +71,16 @@ export default function ProductPage() {
 
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      <div className="md:col-span-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-3xl flex items-center justify-between">
-              <span>Rate: {initialProductName}</span>
-               <Button variant="ghost" onClick={() => router.push('/')}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back to Home
-              </Button>
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+       <div className="md:col-span-3 flex items-center justify-between">
+            <h1 className="font-headline text-3xl">
+              Rate: {initialProductName}
+            </h1>
+            <Button variant="outline" onClick={() => router.push('/')}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Home
+            </Button>
+        </div>
+
       <div className="md:col-span-2 space-y-6">
         <VotingPanel productName={productName} onVibeSubmit={handleVibeSubmit} />
       </div>
@@ -102,6 +96,8 @@ export default function ProductPage() {
                 chartData={chartData} 
                 highlightedProduct={productName} 
                 onVibeChange={handleVibeChangeFromChart}
+                isDraggable={true}
+                showTooltip={false}
               />
             </div>
             <div className="md:col-span-1">

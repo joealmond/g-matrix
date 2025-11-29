@@ -13,7 +13,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   Scatter,
   ScatterChart,
@@ -60,69 +60,90 @@ type MatrixChartProps = {
   highlightedProduct?: string | null;
   onPointClick?: (productName: string) => void;
   onVibeChange?: (vibe: { safety: number; taste: number }) => void;
+  isDraggable?: boolean;
+  showTooltip?: boolean;
 };
 
 
-export function MatrixChart({ chartData, highlightedProduct, onPointClick, onVibeChange }: MatrixChartProps) {
+export function MatrixChart({
+  chartData,
+  highlightedProduct,
+  onPointClick,
+  onVibeChange,
+  isDraggable = false,
+  showTooltip = true,
+}: MatrixChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null); // To get access to chart methods
   const [isDragging, setIsDragging] = useState(false);
 
-  const getVibeFromCoordinates = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!containerRef.current) return null;
+  const getVibeFromCoordinates = useCallback((e: MouseEvent | TouchEvent) => {
+      if (!chartRef.current) return null;
+  
+      const container = chartRef.current.container;
+      const bounds = container.getBoundingClientRect();
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const chart = chartRef.current.chart.getInternalInstance();
+      const xAxisMap = chart.xAxisMap[0];
+      const yAxisMap = chart.yAxisMap[0];
 
-    const container = containerRef.current.querySelector('.recharts-surface');
-    if (!container) return null;
+      if (!xAxisMap || !yAxisMap) return null;
+      
+      // Calculate cursor position relative to the chart plot area
+      const x = clientX - bounds.left - xAxisMap.x + container.scrollLeft;
+      const y = clientY - bounds.top - yAxisMap.y + container.scrollTop;
 
-    const bounds = container.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      // Convert position to domain values
+      let taste = xAxisMap.scale.invert(x);
+      let safety = yAxisMap.scale.invert(y);
+      
+      // Clamp values between 0 and 100
+      taste = Math.max(0, Math.min(100, Math.round(taste)));
+      safety = Math.max(0, Math.min(100, Math.round(safety)));
+      
+      return { taste, safety };
 
-    const x = clientX - bounds.left;
-    const y = clientY - bounds.top;
+    }, []);
 
-    // These values might need to be adjusted if margins/paddings change
-    const chartLeft = 60;
-    const chartRight = bounds.width - 20;
-    const chartTop = 20;
-    const chartBottom = bounds.height - 40;
-    
-    const chartWidth = chartRight - chartLeft;
-    const chartHeight = chartBottom - chartTop;
+  const handlePointerDown = useCallback((props: any, e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDraggable || !onVibeChange) return;
+    setIsDragging(true);
+    e.stopPropagation();
+  }, [isDraggable, onVibeChange]);
 
-    let taste = ((x - chartLeft) / chartWidth) * 100;
-    let safety = 100 - ((y - chartTop) / chartHeight) * 100;
-
-    // Clamp values between 0 and 100
-    taste = Math.max(0, Math.min(100, Math.round(taste)));
-    safety = Math.max(0, Math.min(100, Math.round(safety)));
-
-    return { taste, safety };
-  }, []);
-
-  const handlePointerDown = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!onVibeChange) return;
-    // Check if the click is on a dot
-    const target = e.target as HTMLElement;
-    if (target.classList.contains('recharts-dot')) {
-       setIsDragging(true);
-       e.preventDefault();
-    }
-  }, [onVibeChange]);
-
-  const handlePointerMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (isDragging && onVibeChange) {
       const newVibe = getVibeFromCoordinates(e);
       if (newVibe) {
         onVibeChange(newVibe);
       }
-      e.preventDefault();
     }
   }, [isDragging, onVibeChange, getVibeFromCoordinates]);
 
   const handlePointerUp = useCallback(() => {
     setIsDragging(false);
   }, []);
-  
+
+  useEffect(() => {
+    if (isDraggable) {
+      document.addEventListener('mousemove', handlePointerMove);
+      document.addEventListener('mouseup', handlePointerUp);
+      document.addEventListener('touchmove', handlePointerMove);
+      document.addEventListener('touchend', handlePointerUp);
+    }
+
+    return () => {
+      if (isDraggable) {
+        document.removeEventListener('mousemove', handlePointerMove);
+        document.removeEventListener('mouseup', handlePointerUp);
+        document.removeEventListener('touchmove', handlePointerMove);
+        document.removeEventListener('touchend', handlePointerUp);
+      }
+    };
+  }, [isDraggable, handlePointerMove, handlePointerUp]);
+
 
   return (
     <Card>
@@ -133,14 +154,10 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick, onVib
       <CardContent>
         <div
           ref={containerRef}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
-          className={cn(isDragging ? 'cursor-grabbing' : 'cursor-default', onVibeChange ? 'select-none' : '')}
+          className={cn(
+            isDragging ? 'cursor-grabbing' : 'cursor-default',
+            isDraggable ? 'select-none' : ''
+          )}
         >
           <ChartContainer
             config={chartConfig}
@@ -148,6 +165,7 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick, onVib
           >
             <ResponsiveContainer width="100%" height={400}>
               <ScatterChart
+                ref={chartRef}
                 margin={{
                   top: 20,
                   right: 20,
@@ -251,14 +269,16 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick, onVib
                   }}
                 />
 
-                <ChartTooltip
+                {showTooltip && <ChartTooltip
                   cursor={{ strokeDasharray: '3 3' }}
                   content={
                     <ChartTooltipContent
                       labelKey="product"
                       nameKey="product"
                       formatter={(value, name, props) => {
-                        const color = chartColors[chartData.findIndex(d => d.product === value) % chartColors.length];
+                        const colorIndex = chartData.findIndex(d => d.product === value);
+                        if (colorIndex === -1) return [value, name];
+                        const color = chartColors[colorIndex % chartColors.length];
                         if (name === 'product') {
                           return (
                             <span className="font-bold" style={{ color }}>
@@ -275,17 +295,20 @@ export function MatrixChart({ chartData, highlightedProduct, onPointClick, onVib
                       className="min-w-[12rem] text-base"
                     />
                   }
-                />
-                <ZAxis dataKey="product" name="product" range={[64, 64]} />
+                />}
+                <ZAxis dataKey="product" name="product" range={[isDraggable ? 200 : 64, isDraggable ? 200 : 64]} />
                 <Scatter
                   name="Products"
                   data={chartData}
-                  onClick={(data) => {
+                  onClick={(data, index, event) => {
                     if (!isDragging) {
                       onPointClick?.(data.product);
                     }
+                    event.stopPropagation();
                   }}
-                  className={cn(onVibeChange ? "cursor-grab" : "cursor-pointer", isDragging ? 'cursor-grabbing' : '')}
+                  onMouseDown={handlePointerDown}
+                  onTouchStart={handlePointerDown}
+                  className={cn(isDraggable ? "cursor-grab" : "cursor-pointer", isDragging ? 'cursor-grabbing' : '')}
                 >
                   {chartData.map((entry, index) => {
                     const isHighlighted = highlightedProduct === entry.product;
