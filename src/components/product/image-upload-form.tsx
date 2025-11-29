@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useActionState } from 'react';
+import { useActionState, useTransition } from 'react';
 
 type ImageUploadFormProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -39,6 +39,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const uploadAndRedirect = async () => {
@@ -71,6 +72,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             title: 'Upload Failed',
             description: e.message || 'Could not upload the product image.',
           });
+        } finally {
           setIsUploading(false);
         }
       }
@@ -94,9 +96,6 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFile(e.target.files?.[0]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -123,16 +122,28 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     const file = e.dataTransfer.files[0];
     handleFile(file);
   };
+  
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedFile) return;
 
-  const processing = isProcessing || isUploading;
-  const buttonText = isProcessing
+    const formData = new FormData();
+    formData.append('photo', selectedFile);
+
+    startTransition(() => {
+        formAction(formData);
+    });
+  };
+
+  const processing = isProcessing || isUploading || isPending;
+  const buttonText = isProcessing || isPending
     ? 'Analyzing...'
     : isUploading
     ? 'Uploading...'
     : 'Analyze Image';
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid w-full items-center gap-1.5">
         <Label htmlFor="photo-upload">Product Photo</Label>
         <div

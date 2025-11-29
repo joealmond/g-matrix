@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useActionState } from 'react';
+import { useActionState, useTransition } from 'react';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;
@@ -30,10 +30,14 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     initialState
   );
 
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(
+    null
+  );
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,7 +60,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           toast({
             variant: 'destructive',
             title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings.',
+            description:
+              'Please enable camera permissions in your browser settings.',
           });
         }
       } else {
@@ -77,7 +82,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       }
     };
   }, [toast]);
-  
+
   useEffect(() => {
     const uploadAndRedirect = async () => {
       if (state.productName && capturedFile && app) {
@@ -104,11 +109,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           }
         } catch (e: any) {
           console.error('Image upload failed:', e);
-           toast({
+          toast({
             variant: 'destructive',
             title: 'Upload Failed',
             description: e.message || 'Could not upload the product image.',
           });
+        } finally {
           setIsUploading(false);
         }
       }
@@ -140,6 +146,15 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       }
     }
   };
+  
+  const handleSubmit = () => {
+    if (!capturedFile) return;
+    const formData = new FormData();
+    formData.append('photo', capturedFile);
+    startTransition(() => {
+        formAction(formData);
+    });
+  }
 
   const handleRetake = () => {
     setCapturedImage(null);
@@ -160,9 +175,13 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     }
     return new File([u8arr], filename, { type: mime });
   };
-  
+
   if (hasCameraPermission === null) {
-    return <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   if (hasCameraPermission === false) {
@@ -178,17 +197,15 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     );
   }
 
-  const processing = isProcessing || isUploading;
-  const buttonText = isProcessing
+  const processing = isProcessing || isUploading || isPending;
+  const buttonText = isProcessing || isPending
     ? 'Analyzing...'
     : isUploading
     ? 'Uploading...'
     : 'Analyze Captured Image';
 
   return (
-    <form action={formAction} className="space-y-4">
-      {/* Hidden input to hold the file for the form action */}
-      {capturedFile && <input type="file" name="photo" defaultValue={undefined} style={{ display: 'none' }} files={new DataTransfer().files} />}
+    <div className="space-y-4">
       {!capturedImage ? (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
@@ -199,7 +216,7 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
               muted
               playsInline
             />
-             <canvas ref={canvasRef} className="hidden" />
+            <canvas ref={canvasRef} className="hidden" />
           </div>
           <Button onClick={handleCapture} className="w-full" type="button">
             <Camera className="mr-2 h-4 w-4" />
@@ -212,26 +229,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={capturedImage} alt="Captured" className="w-full" />
           </div>
-          {capturedFile && (
-             <input
-              type="file"
-              name="photo"
-              ref={input => {
-                if (input) {
-                  const dataTransfer = new DataTransfer();
-                  dataTransfer.items.add(capturedFile);
-                  input.files = dataTransfer.files;
-                }
-              }}
-              style={{ display: 'none' }}
-            />
-          )}
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleRetake} type="button">
               <RefreshCw className="mr-2 h-4 w-4" />
               Retake
             </Button>
-            <Button type="submit" disabled={processing} className="w-full">
+            <Button onClick={handleSubmit} disabled={processing} className="w-full" type="button">
               {processing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {buttonText}
             </Button>
@@ -246,6 +249,6 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           <AlertDescription>{state.error}</AlertDescription>
         </Alert>
       )}
-    </form>
+    </div>
   );
 }
