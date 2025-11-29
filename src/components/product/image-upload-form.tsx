@@ -10,7 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Terminal } from 'lucide-react';
 import { useFormState, useFormStatus } from 'react-dom';
-import { analyzeAndUploadProduct, initialState } from '@/app/actions';
+import { analyzeAndUploadProduct } from '@/app/actions';
+import { initialState } from '@/lib/actions-types';
 import { useRouter } from 'next/navigation';
 
 type ImageUploadFormProps = {

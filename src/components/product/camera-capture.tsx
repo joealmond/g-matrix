@@ -6,7 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { analyzeAndUploadProduct, ImageAnalysisState } from '@/app/actions';
+import { analyzeAndUploadProduct } from '@/app/actions';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 
 type CameraCaptureProps = {
   onProductIdentified?: (productName: string, imageUrl: string) => void;

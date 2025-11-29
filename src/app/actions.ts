@@ -5,6 +5,7 @@ import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 
 // Define the structure we want Gemini to return
 const AnalysisSchema = z.object({
@@ -15,21 +16,6 @@ const AnalysisSchema = z.object({
   reasoning: z.string().describe('Short explanation of why it was classified this way'),
 });
 
-export type ImageAnalysisState = {
-  productName?: string | null;
-  productId?: string | null;
-  imageUrl?: string | null;
-  error?: string | null;
-  success: boolean;
-};
-
-
-export const initialState: ImageAnalysisState = {
-  productName: null,
-  imageUrl: null,
-  error: null,
-  success: false,
-};
 
 export async function analyzeAndUploadProduct(
   prevState: ImageAnalysisState,
@@ -40,7 +26,7 @@ export async function analyzeAndUploadProduct(
     const userId = 'anonymous'; // Optional tracking
 
     if (!file || file.size === 0) {
-      return { ...initialState, error: 'No image file provided' };
+      return { success: false, error: 'No image file provided' };
     }
 
     // --- STEP 1: PREPARE IMAGE FOR AI ---
@@ -108,6 +94,6 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    return { ...initialState, error: `Failed to process image: ${error.message}` };
+    return { success: false, error: `Failed to process image: ${error.message}` };
   }
 }

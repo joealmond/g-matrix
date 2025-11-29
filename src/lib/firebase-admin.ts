@@ -1,4 +1,5 @@
-'use server'; // Prevents this from leaking to client
+
+import 'server-only'; // Prevents this from leaking to client
 import admin from 'firebase-admin';
 
 // Check if app is already initialized to prevent "App already exists" error
