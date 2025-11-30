@@ -34,7 +34,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { user, isUserLoading } = useUser();
+  const { user, loading: isUserLoading } = useUser();
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
   const isLoading = isUserLoading || (user && isAdminLoading);
@@ -50,15 +50,15 @@ function LoginContent() {
         title: "Admin Login Successful",
         description: `Welcome back! Redirecting you...`,
       });
-      // Admins are redirected to the path they were trying to access, or the main admin page.
-      router.push(redirectPath || '/admin');
+      // Admins are always redirected to the main admin page.
+      router.push('/admin');
     } else {
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       });
-      // Non-admins are sent to the homepage.
-      router.push('/');
+      // Non-admins are sent to the homepage or their original intended path.
+      router.push(redirectPath || '/');
     }
     
   }, [user, isAdmin, isLoading, router, toast, redirectPath]);
