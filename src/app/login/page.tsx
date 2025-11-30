@@ -49,12 +49,13 @@ export default function LoginPage() {
         description: "Welcome back!",
       })
       router.push('/account');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during sign-in:', error);
-       toast({
+      const errorMessage = error.message || "An unknown error occurred.";
+      toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Could not sign you in with Google. Please try again.",
+        description: `Could not sign you in with Google. Reason: ${errorMessage}`,
       })
     }
   };
