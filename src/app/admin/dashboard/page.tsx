@@ -46,16 +46,21 @@ export default function AdminDashboardPage() {
   }, [searchTerm, chartData]);
 
   useEffect(() => {
-    // Wait until loading is complete before checking auth status
-    if (!isLoading) {
-        // If there's no user or the user is not an admin, redirect
-        if (!user) {
-            router.push('/login');
-        } else if (!isAdmin) {
-            router.push('/'); // Redirect non-admins to the homepage
-        }
+    // This effect handles redirection based on auth state.
+    // It waits until both user and admin status are resolved.
+    if (isLoading) {
+      return; // Don't do anything while loading.
     }
-  }, [isLoading, user, isAdmin, router]);
+
+    if (!user) {
+      // If there's no user, they must log in.
+      router.push('/login');
+    } else if (!isAdmin) {
+      // If there is a user, but they aren't an admin, send them to the homepage.
+      router.push('/');
+    }
+    // If a user exists and isAdmin is true, they can see the page.
+  }, [user, isAdmin, isLoading, router]);
 
   const handlePointClick = (productName: string) => {
     setHighlightedProduct(productName);
@@ -73,10 +78,14 @@ export default function AdminDashboardPage() {
     return (
         <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
+            <p className="ml-4 text-muted-foreground">Verifying admin access...</p>
         </div>
     );
   }
 
+  // This content will only be rendered if the useEffect hook doesn't redirect.
+  // It provides a clear message in the brief moment before the redirect happens,
+  // or if the redirect fails for some reason.
   if (!isAdmin) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-full">
