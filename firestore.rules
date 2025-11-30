@@ -2,10 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Public Products: Everyone can READ, but only the server (Admin SDK) can WRITE.
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    // Public Products: Everyone can READ, but only admins can WRITE/DELETE.
     match /products/{productId} {
       allow read: if true; 
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // User Votes: Logged-in (including anonymous) users can create votes.
@@ -27,7 +31,7 @@ service cloud.firestore {
 
     // Admin Roles: Only other admins can read or write to the admin roles collection.
     match /roles_admin/{userId} {
-        allow read, write: if get(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) != null;
+        allow read, write: if isAdmin();
     }
   }
 }
