@@ -104,6 +104,8 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    return { success: false, error: `Failed to process image: ${error.message}` };
+    // Return the full, detailed error message to the client for debugging.
+    const errorMessage = `Failed to process image. Full error: ${error.toString()}`;
+    return { success: false, error: errorMessage };
   }
 }
