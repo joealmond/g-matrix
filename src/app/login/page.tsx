@@ -85,8 +85,8 @@ export default function LoginPage() {
     );
   }
 
-  // If user is already logged in, they shouldn't see the login page.
-  // The useEffect will redirect them.
+  // If user is already logged in, they are being redirected by the useEffect.
+  // Show a loading/redirecting state to prevent the login form from flashing.
   if (user) {
     return (
        <div className="flex flex-1 items-center justify-center">

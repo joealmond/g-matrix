@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useUser } from '@/firebase';
 
-
 export default function AdminDashboardPage() {
   const [highlightedProduct, setHighlightedProduct] = useState<string | null>(
     null
@@ -27,13 +26,20 @@ export default function AdminDashboardPage() {
 
   const isLoading = isAdminLoading || isUserLoading;
 
+  useEffect(() => {
+    // This effect handles redirection for unauthenticated users.
+    if (!isLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isLoading, router]);
 
   const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'products'));
   }, [firestore]);
 
-  const { data: chartData, loading: productsLoading } = useCollection<Product>(productsCollection);
+  const { data: chartData, loading: productsLoading } =
+    useCollection<Product>(productsCollection);
 
   const filteredData = useMemo(() => {
     if (!chartData) return [];
@@ -44,23 +50,6 @@ export default function AdminDashboardPage() {
       item.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, chartData]);
-
-  useEffect(() => {
-    // This effect handles redirection based on auth state.
-    // It waits until both user and admin status are resolved.
-    if (isLoading) {
-      return; // Don't do anything while loading.
-    }
-
-    if (!user) {
-      // If there's no user, they must log in.
-      router.push('/login');
-    } else if (!isAdmin) {
-      // If there is a user, but they aren't an admin, send them to the homepage.
-      router.push('/');
-    }
-    // If a user exists and isAdmin is true, they can see the page.
-  }, [user, isAdmin, isLoading, router]);
 
   const handlePointClick = (productName: string) => {
     setHighlightedProduct(productName);
@@ -76,30 +65,32 @@ export default function AdminDashboardPage() {
 
   if (isLoading) {
     return (
-        <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
-            <p className="ml-4 text-muted-foreground">Verifying admin access...</p>
-        </div>
+      <div className="flex flex-1 items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
+        <p className="ml-4 text-muted-foreground">Verifying admin access...</p>
+      </div>
     );
   }
 
-  // This content will only be rendered if the useEffect hook doesn't redirect.
-  // It provides a clear message in the brief moment before the redirect happens,
-  // or if the redirect fails for some reason.
+  // Show access denied for non-admins AFTER loading is complete.
+  // This prevents flickering content.
   if (!isAdmin) {
     return (
       <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-full">
-         <div className="flex flex-col items-center gap-1 text-center">
-             <ShieldAlert className="h-16 w-16 text-destructive" />
-             <h3 className="text-2xl font-bold tracking-tight font-headline">Access Denied</h3>
-             <p className="text-sm text-muted-foreground">
-                 You do not have permission to view this page. Redirecting...
-             </p>
-         </div>
-     </div>
-    )
- }
+        <div className="flex flex-col items-center gap-1 text-center">
+          <ShieldAlert className="h-16 w-16 text-destructive" />
+          <h3 className="text-2xl font-bold tracking-tight font-headline">
+            Access Denied
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            You do not have permission to view this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
+  // This content will only be rendered for verified admins.
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-3">
@@ -113,8 +104,11 @@ export default function AdminDashboardPage() {
         />
       </div>
       <div className="lg:col-span-1 flex flex-col gap-6">
-         <ProductSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
-         <AdminProductList
+        <ProductSearch
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+        />
+        <AdminProductList
           chartData={filteredData || []}
           loading={productsLoading}
           onItemClick={handleItemClick}
