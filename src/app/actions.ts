@@ -1,21 +1,9 @@
 'use server';
 
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
-import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import type { ImageAnalysisState } from '@/lib/actions-types';
-
-// Define the structure we want Gemini to return
-const AnalysisSchema = z.object({
-  productName: z.string().describe('The specific brand name and product name visible on the packaging. If not found, return "Unnamed Product".'),
-  isLikelyGlutenFree: z.boolean().describe('True if the packaging explicitly says Gluten Free or is naturally gluten free'),
-  riskLevel: z.enum(['Safe', 'Sketchy', 'Unsafe']).describe('Based on ingredients or GF certification logos visible'),
-  tags: z.array(z.string()).describe('Short tags like "Bread", "Snack", "Certified GF"'),
-  reasoning: z.string().describe('Short explanation of why it was classified this way'),
-});
-
+import { extractProductNameFromImage } from '@/ai/flows/extract-product-name-from-image';
 
 export async function analyzeAndUploadProduct(
   prevState: ImageAnalysisState,
@@ -25,12 +13,6 @@ export async function analyzeAndUploadProduct(
     const file = formData.get('image') as File;
     const userId = 'anonymous'; // Optional tracking
 
-    // 1. Safety Check for API Key
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
-    }
-
     if (!file || file.size === 0) {
       return { success: false, error: 'No image file provided' };
     }
@@ -39,23 +21,10 @@ export async function analyzeAndUploadProduct(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${base64Image}`;
 
-    // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
-    const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash', {
-        apiKey: apiKey, // Use the detected key
-      }),
-      schema: AnalysisSchema,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analyze this product image for a celiac/gluten-free community app. Identify the product precisely. If you cannot identify the product name, return "Unnamed Product".' },
-            { type: 'image', image: base64Image },
-          ],
-        },
-      ],
-    });
+    // --- STEP 2: ASK GEMINI via GENKIT FLOW ---
+    const analysis = await extractProductNameFromImage({ photoDataUri: dataUri });
 
     // --- STEP 3: UPLOAD IMAGE TO FIREBASE STORAGE (ADMIN SDK) ---
     let publicUrl: string;
@@ -80,10 +49,8 @@ export async function analyzeAndUploadProduct(
         );
     }
 
-
     // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
     const productName = analysis.productName || 'Unnamed Product';
-    // Create a simpler ID (remove spaces, lowercase)
     const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const productRef = adminDb.collection('products').doc(productId);
 
@@ -93,14 +60,6 @@ export async function analyzeAndUploadProduct(
       await productRef.set({
         name: productName,
         imageUrl: publicUrl,
-        // --- FIX: SAVE THE AI DATA HERE ---
-        aiAnalysis: {
-          isGlutenFree: analysis.isLikelyGlutenFree,
-          riskLevel: analysis.riskLevel,
-          reasoning: analysis.reasoning,
-          tags: analysis.tags
-        },
-        // ----------------------------------
         avgSafety: 50,
         avgTaste: 50,
         voteCount: 0,

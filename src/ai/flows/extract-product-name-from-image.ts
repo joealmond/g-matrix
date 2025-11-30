@@ -22,7 +22,7 @@ export type ExtractProductNameFromImageInput = z.infer<
 >;
 
 const ExtractProductNameFromImageOutputSchema = z.object({
-  productName: z.string().describe('The name of the product extracted from the image.'),
+  productName: z.string().describe('The name of the product extracted from the image. If not found, return "Unnamed Product".'),
 });
 export type ExtractProductNameFromImageOutput = z.infer<
   typeof ExtractProductNameFromImageOutputSchema
@@ -38,8 +38,8 @@ const prompt = ai.definePrompt({
   name: 'extractProductNameFromImagePrompt',
   input: {schema: ExtractProductNameFromImageInputSchema},
   output: {schema: ExtractProductNameFromImageOutputSchema},
-  prompt: `You are an AI assistant designed to extract the name of a product from an image.
-Analyze the following image and extract the product name. Only return the product name.
+  prompt: `You are an AI assistant designed to extract the name of a product from an image for a celiac/gluten-free community app.
+Analyze the following image and extract the product name. Only return the product name. If you cannot identify the product name, return "Unnamed Product".
 
 Image:
 {{media url=photoDataUri}}
