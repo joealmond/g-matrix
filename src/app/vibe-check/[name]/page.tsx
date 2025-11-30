@@ -157,11 +157,11 @@ export default function VibeCheckPage() {
                 </CardHeader>
                 <CardContent>
                     {imageUrl ? (
-                      <div className="relative w-full aspect-square rounded-md overflow-hidden border">
+                      <div className="relative w-full rounded-md overflow-hidden border">
                         <img 
                           src={imageUrl} 
                           alt={`Image of ${productName}`} 
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain aspect-square"
                         />
                       </div>
                     ) : (
