@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/chart';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { Product } from '@/lib/types';
+import { ArrowRight, ArrowUp } from 'lucide-react';
 import {
   Scatter,
   ScatterChart,
@@ -100,7 +101,13 @@ export function MatrixChart({
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">G-Matrix</CardTitle>
-        <CardDescription>Product Safety vs. Taste Ratings</CardDescription>
+        <CardDescription className="flex items-center gap-1">
+          <span>Product Safety</span>
+          <ArrowUp className="h-4 w-4" />
+          <span>vs. Taste</span>
+          <ArrowRight className="h-4 w-4" />
+          <span>Ratings</span>
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className={'cursor-default'}>
