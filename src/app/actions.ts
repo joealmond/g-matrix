@@ -22,12 +22,11 @@ export async function analyzeAndUploadProduct(
 ): Promise<ImageAnalysisState> {
   try {
     const file = formData.get('image') as File;
-    const userId = 'anonymous'; 
+    const userId = 'anonymous';
 
-    // 1. Standard Safety Check
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
+    // 1. Check API Key
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env.local");
     }
 
     if (!file || file.size === 0) {
@@ -40,10 +39,9 @@ export async function analyzeAndUploadProduct(
     const base64Image = buffer.toString('base64');
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
+    // CRITICAL FIX: We use 'gemini-1.5-flash' here because 'gemini-pro' often fails with 404 on image inputs
     const { object: analysis } = await generateObject({
-      model: google('gemini-pro', {
-        apiKey: apiKey, 
-      }), 
+      model: google('gemini-1.5-flash'),
       schema: AnalysisSchema,
       messages: [
         {
@@ -57,16 +55,16 @@ export async function analyzeAndUploadProduct(
     });
 
     // --- STEP 3: UPLOAD IMAGE TO FIREBASE STORAGE (ADMIN SDK) ---
-    const bucket = adminStorage.bucket(); 
+    const bucket = adminStorage.bucket();
     const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
     const fileUpload = bucket.file(fileName);
 
     await fileUpload.save(buffer, {
-      metadata: { 
+      metadata: {
         contentType: file.type,
       },
     });
-    
+
     await fileUpload.makePublic();
     const publicUrl = fileUpload.publicUrl();
 
@@ -96,7 +94,7 @@ export async function analyzeAndUploadProduct(
     }
 
     revalidatePath('/');
-    
+
     return {
       success: true,
       productId: productId,
@@ -107,14 +105,6 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    // Return the full, detailed error object, stringified, to the client for debugging.
-    let fullError = 'Unknown error';
-    try {
-        fullError = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
-    } catch {
-        fullError = error.toString();
-    }
-    const errorMessage = `Failed to process image. Full error: ${fullError}`;
-    return { success: false, error: errorMessage };
+    return { success: false, error: `Failed to process image: ${error.message}` };
   }
 }
