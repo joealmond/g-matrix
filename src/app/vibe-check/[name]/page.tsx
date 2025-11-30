@@ -161,7 +161,7 @@ export default function VibeCheckPage() {
                         <img 
                           src={imageUrl} 
                           alt={`Image of ${productName}`} 
-                          className="max-h-[400px] w-auto object-contain"
+                          className="max-h-[400px] w-auto max-w-full object-contain"
                         />
                       </div>
                     ) : (

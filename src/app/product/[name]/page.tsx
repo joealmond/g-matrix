@@ -91,7 +91,7 @@ export default function ProductDetailsPage() {
                       <img 
                         src={product.imageUrl} 
                         alt={`Image of ${product.name}`} 
-                        className="max-h-[400px] w-auto object-contain"
+                        className="max-h-[400px] w-auto max-w-full object-contain"
                       />
                     </div>
                   ) : (
