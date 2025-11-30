@@ -35,7 +35,7 @@ export default function LoginPage() {
   const { user, loading: isUserLoading } = useUser();
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
-  const isLoading = isUserLoading || isAdminLoading;
+  const isLoading = isUserLoading || (user && isAdminLoading);
 
   useEffect(() => {
     // This effect handles redirection after login.
@@ -76,7 +76,7 @@ export default function LoginPage() {
   };
   
   // While user and admin status are being checked post-login, show a loading indicator.
-  if (isUserLoading || (user && isAdminLoading)) {
+  if (isLoading) {
      return (
         <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />

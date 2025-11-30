@@ -58,7 +58,7 @@ export function DynamicHeaderButtons() {
              <Button variant="outline" asChild>
                 <Link href="/">
                     <User className="mr-2 h-4 w-4" />
-                    <span>Account</span>
+                    <span>Home</span>
                 </Link>
             </Button>
           )}
