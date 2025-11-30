@@ -26,7 +26,7 @@ export async function analyzeAndUploadProduct(
 
     // 1. Standard Safety Check
     if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env.local file");
+      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
     }
 
     if (!file || file.size === 0) {
@@ -40,7 +40,7 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash-latest'), 
+      model: google('gemini-pro'), 
       schema: AnalysisSchema,
       messages: [
         {
@@ -105,7 +105,7 @@ export async function analyzeAndUploadProduct(
   } catch (error: any) {
     console.error('Server Action Error:', error);
     // Return the full, detailed error message to the client for debugging.
-    const errorMessage = `Failed to process image. Full error: ${error.toString()}`;
+    const errorMessage = `Failed to process image: ${error.message}`;
     return { success: false, error: errorMessage };
   }
 }
