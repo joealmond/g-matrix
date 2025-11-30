@@ -8,8 +8,6 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { FineTunePanel } from '@/components/dashboard/fine-tune-panel';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,8 +32,8 @@ export default function VibeCheckPage() {
   
   const [manualProductName, setManualProductName] = useState('');
   
-  const productName = decodeURIComponent(params.name as string);
-  const isUnnamedProduct = productName === 'Unnamed Product' || !productName;
+  const decodedProductName = decodeURIComponent(params.name as string);
+  const isUnnamedProduct = decodedProductName === 'Unnamed Product' || !decodedProductName;
 
   useEffect(() => {
     if (!imageUrl) {
@@ -43,7 +41,7 @@ export default function VibeCheckPage() {
         if (productDataString) {
             try {
                 const productData = JSON.parse(productDataString);
-                if (productData.name === productName) {
+                if (productData.name === decodedProductName) {
                     setImageUrl(productData.imageUrl);
                 }
             } catch (e) {
@@ -51,18 +49,18 @@ export default function VibeCheckPage() {
             }
         }
     }
-  }, [productName, imageUrl]);
+  }, [decodedProductName, imageUrl]);
 
   useEffect(() => {
     const findOrCreateProduct = async () => {
-        if (!firestore || !productName || isUnnamedProduct) {
+        if (!firestore || !decodedProductName || isUnnamedProduct) {
           setIsLoading(false);
           return;
         };
 
         setIsLoading(true);
 
-        const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const productRef = doc(firestore, 'products', productId);
         
         try {
@@ -76,7 +74,7 @@ export default function VibeCheckPage() {
                 }
             } else {
                 const newProductData: Omit<Product, 'id'> = {
-                    name: productName,
+                    name: decodedProductName,
                     imageUrl: imageUrl || 'https://placehold.co/600x400',
                     avgSafety: 50,
                     avgTaste: 50,
@@ -100,7 +98,7 @@ export default function VibeCheckPage() {
 
     findOrCreateProduct();
 
-  }, [firestore, productName, isUnnamedProduct, imageUrl]);
+  }, [firestore, decodedProductName, isUnnamedProduct, imageUrl]);
   
   const handleManualNameSubmit = () => {
     const trimmedName = manualProductName.trim();
@@ -144,7 +142,7 @@ export default function VibeCheckPage() {
         <div>
             <Card>
                 <CardHeader>
-                    <CardTitle className='font-headline'>{isUnnamedProduct ? 'Unnamed Product' : productName}</CardTitle>
+                    <CardTitle className='font-headline'>{isUnnamedProduct ? 'Unnamed Product' : decodedProductName}</CardTitle>
                     <CardDescription>
                       {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
                     </CardDescription>
@@ -154,7 +152,7 @@ export default function VibeCheckPage() {
                       <div className="relative w-full rounded-md overflow-hidden border p-4 flex justify-center items-center">
                         <img 
                           src={imageUrl} 
-                          alt={`Image of ${productName}`} 
+                          alt={`Image of ${decodedProductName}`} 
                           className="max-h-[400px] w-auto max-w-full object-contain"
                         />
                       </div>
