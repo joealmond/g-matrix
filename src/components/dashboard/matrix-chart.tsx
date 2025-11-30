@@ -106,7 +106,6 @@ export function MatrixChart({
           <ArrowUp className="h-4 w-4" />
           <span>vs. Taste</span>
           <ArrowRight className="h-4 w-4" />
-          <span>Ratings</span>
         </CardDescription>
       </CardHeader>
       <CardContent>
