@@ -54,19 +54,10 @@ export function DraggableDot({
     };
   }, [isDragging, onVibeChange]);
 
-  // This outer div is the reference for positioning
-  // It needs to align perfectly with the chart's plot area.
-  // The padding values are adjusted to match the recharts plot area.
   return (
     <div
       ref={containerRef}
-      className="absolute top-0 left-0 w-full h-full"
-      style={{
-        paddingTop: '3.7rem', // Approximates recharts margin + header
-        paddingBottom: '3.5rem',// Approximates recharts margin
-        paddingLeft: '1.5rem', // Approximates recharts margin
-        paddingRight: '3.5rem', // Approximates recharts margin
-      }}
+      className="absolute top-0 left-0 w-full h-full cursor-grab"
     >
       <div
         ref={dotRef}

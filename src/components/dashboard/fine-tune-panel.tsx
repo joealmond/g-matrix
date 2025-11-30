@@ -129,15 +129,15 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="relative mb-6">
-            <ProductVibeChart />
-            <DraggableDot
-                safety={vibe.safety}
-                taste={vibe.taste}
-                onVibeChange={handleVibeChange}
-            />
+        <div className="relative mb-6 h-[400px]">
+          <ProductVibeChart />
+          <DraggableDot
+            safety={vibe.safety}
+            taste={vibe.taste}
+            onVibeChange={handleVibeChange}
+          />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 pt-4">
             <div>
                 <Label htmlFor="safety-slider" className="mb-2 block">Safety: {vibe.safety}%</Label>
                 <Slider
