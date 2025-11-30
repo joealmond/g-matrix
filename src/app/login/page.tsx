@@ -11,11 +11,10 @@ import {
 } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
-import { useAdmin } from '@/hooks/use-admin';
 import { Loader2 } from 'lucide-react';
 
 function GoogleIcon() {
@@ -32,36 +31,23 @@ function GoogleIcon() {
 function LoginContent() {
   const auth = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, loading: isUserLoading } = useUser();
-  const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
-  const isLoading = isUserLoading || (user && isAdminLoading);
-  const redirectPath = searchParams.get('redirect');
 
   // This effect handles redirection immediately after a user signs in.
   useEffect(() => {
     // Wait until loading is complete and we have a user.
-    if (isLoading || !user) return;
+    if (isUserLoading || !user) return;
 
-    if (isAdmin) {
-      toast({
-        title: "Admin Login Successful",
-        description: `Welcome back! Redirecting you...`,
-      });
-      // Admins are always redirected to the main admin page.
-      router.push('/admin');
-    } else {
-      toast({
-        title: "Login Successful",
-        description: "Welcome back!",
-      });
-      // Non-admins are sent to the homepage or their original intended path.
-      router.push(redirectPath || '/');
-    }
+    toast({
+      title: "Login Successful",
+      description: "Welcome back! Redirecting you to the admin dashboard...",
+    });
+    // Always redirect to the main admin page.
+    router.push('/admin');
     
-  }, [user, isAdmin, isLoading, router, toast, redirectPath]);
+  }, [user, isUserLoading, router, toast]);
 
 
   const handleGoogleSignIn = async () => {
@@ -69,7 +55,7 @@ function LoginContent() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The useEffect hooks will handle the redirect once user and admin state are loaded.
+      // The useEffect hook will handle the redirect once user state is loaded.
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       const errorMessage = error.message || "An unknown error occurred.";
@@ -81,8 +67,8 @@ function LoginContent() {
     }
   };
   
-  // While user and admin status are being checked post-login, show a loading indicator.
-  if (isLoading) {
+  // While user status is being checked post-login, show a loading indicator.
+  if (isUserLoading) {
      return (
         <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
@@ -111,7 +97,7 @@ function LoginContent() {
             Sign In
           </CardTitle>
           <CardDescription>
-            Sign in with Google to continue.
+            Sign in with Google to continue to the admin dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
