@@ -53,8 +53,11 @@ export default function VibeCheckPage() {
 
   useEffect(() => {
     const findOrCreateProduct = async () => {
+        // If the product is unnamed, don't interact with the DB yet.
+        // Wait for the user to provide a name.
         if (!firestore || !decodedProductName || isUnnamedProduct) {
           setIsLoading(false);
+          setProduct(null); // Ensure no product is set
           return;
         };
 
@@ -81,6 +84,7 @@ export default function VibeCheckPage() {
                     voteCount: 0,
                 };
                 
+                // Only create the product if it has a valid name.
                 await setDoc(productRef, newProductData);
                 setProduct({ id: productId, ...newProductData });
             }
@@ -115,6 +119,7 @@ export default function VibeCheckPage() {
     sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
 
     startTransition(() => {
+      // Replace the URL. The useEffect hook will then handle creating the product with the new name.
       router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`, { scroll: false });
     });
   };
