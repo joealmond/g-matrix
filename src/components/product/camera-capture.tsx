@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useTransition, useActionState } from 'react';
+import { useState, useRef, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
@@ -30,8 +30,9 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     const getCameraPermission = async () => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
+          // Use a more generic video request for broader device compatibility.
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
+            video: true,
           });
           setHasCameraPermission(true);
           if (videoRef.current) {
@@ -83,8 +84,12 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
+        // Draw a white background for JPEG
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-        const dataUri = canvas.toDataURL('image/png');
+        // Use JPEG for better compatibility and smaller size
+        const dataUri = canvas.toDataURL('image/jpeg', 0.9);
         setCapturedImage(dataUri);
       }
     }
@@ -95,7 +100,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
     startTransition(async () => {
       const blob = await fetch(capturedImage).then(res => res.blob());
-      const file = new File([blob], 'captured-image.png', { type: 'image/png' });
+      // Explicitly set the file type to 'image/jpeg' to match the data URI
+      const file = new File([blob], 'captured-image.jpg', { type: 'image/jpeg' });
       
       const formData = new FormData();
       formData.append('image', file);
