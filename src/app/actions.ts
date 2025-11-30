@@ -42,7 +42,7 @@ export async function analyzeAndUploadProduct(
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
       model: google('gemini-pro', {
-        apiKey: apiKey, // Explicitly pass the API key
+        apiKey: apiKey, 
       }), 
       schema: AnalysisSchema,
       messages: [
@@ -107,8 +107,14 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    // Return the full, detailed error message to the client for debugging.
-    const errorMessage = `Failed to process image: ${error.message}`;
+    // Return the full, detailed error object, stringified, to the client for debugging.
+    let fullError = 'Unknown error';
+    try {
+        fullError = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+    } catch {
+        fullError = error.toString();
+    }
+    const errorMessage = `Failed to process image. Full error: ${fullError}`;
     return { success: false, error: errorMessage };
   }
 }
