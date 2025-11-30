@@ -46,7 +46,7 @@ export default function ProductDetailsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-4">
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
           <Skeleton className="h-96 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
@@ -78,7 +78,7 @@ export default function ProductDetailsPage() {
             </h1>
         </div>
       
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
         <div>
           <Card>
               <CardHeader>
