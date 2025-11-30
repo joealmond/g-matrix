@@ -27,9 +27,11 @@ export function DynamicHeaderButtons() {
 
   const handleLogout = () => {
     if (auth) {
-      auth.signOut().then(() => {
-        router.push('/');
-      });
+      // First, navigate to the root path.
+      router.push('/');
+      // Then, sign out. The onAuthStateChanged listener will update the UI,
+      // but the user will already be on the public homepage.
+      auth.signOut();
     }
   };
 
