@@ -39,9 +39,9 @@ export async function analyzeAndUploadProduct(
     const base64Image = buffer.toString('base64');
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
-    // CRITICAL FIX: We use 'gemini-1.5-flash' here because 'gemini-pro' often fails with 404 on image inputs
+    // FIX 1: Use 'gemini-1.5-flash-latest' to ensure we hit a valid endpoint.
     const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash'),
+      model: google('gemini-1.5-flash-latest'),
       schema: AnalysisSchema,
       messages: [
         {
@@ -51,8 +51,9 @@ export async function analyzeAndUploadProduct(
             { 
               type: 'image', 
               image: base64Image,
-              // FIX: Explicitly providing the mimeType is required for some base64 implementations
-              mimeType: file.type || 'image/jpeg', 
+              // FIX 2: Ensure a valid image mimeType is always sent. 
+              // Fallback to 'image/jpeg' if the browser sends a generic type like 'application/octet-stream'.
+              mimeType: (file.type && file.type !== 'application/octet-stream') ? file.type : 'image/jpeg', 
             },
           ],
         },
