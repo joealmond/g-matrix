@@ -93,9 +93,9 @@ export default function AdminDashboardPage() {
   // This content will only be rendered for verified admins.
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-3">
+      {/* <div className="lg:col-span-3">
         <AdSlot />
-      </div>
+      </div> */}
       <div className="lg:col-span-2">
         <MatrixChart
           chartData={filteredData || []}
