@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, User, LogIn, LogOut } from 'lucide-react';
+import { ArrowLeft, Upload, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
+import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
 import { Skeleton } from '../ui/skeleton';
@@ -18,55 +18,48 @@ export function DynamicHeaderButtons() {
   const { user, isUserLoading: userLoading } = useUser();
   const { isAdmin, isLoading: adminLoading } = useAdmin();
 
-  const isLoading = userLoading || adminLoading;
+  const isLoading = userLoading || (user && adminLoading);
 
   const handleScanClick = () => {
     setDialogOpen(true);
   };
-  
+
   const handleLogout = () => {
     if (auth) {
-        auth.signOut().then(() => {
-            router.push('/');
-        });
+      auth.signOut().then(() => {
+        router.push('/');
+      });
     }
-  }
+  };
 
   if (isLoading) {
-    // On the server and during initial client render, render a placeholder
-    // to prevent layout shifts.
     return (
-        <div className="flex items-center gap-4">
-            <Skeleton className="w-32 h-10" />
-            <Skeleton className="w-24 h-10" />
-        </div>
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
     );
   }
 
   const isSpecialPage =
     pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/');
 
-  const renderAuthButton = () => {
+  const renderAuthButtons = () => {
     if (user) {
       return (
         <>
           {isAdmin ? (
             <Button variant="outline" asChild>
-              <Link href="/admin/dashboard">
-                <span>Admin</span>
-              </Link>
+              <Link href="/admin/dashboard">Admin</Link>
             </Button>
           ) : (
-             <Button variant="outline" asChild>
-                <Link href="/">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Home</span>
-                </Link>
+            <Button variant="outline" asChild>
+              <Link href="/">Home</Link>
             </Button>
           )}
           <Button variant="ghost" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Logout</span>
+            <LogOut className="mr-2 h-4 w-4" />
+            Logout
           </Button>
         </>
       );
@@ -75,11 +68,11 @@ export function DynamicHeaderButtons() {
       <Button variant="outline" asChild>
         <Link href="/login">
           <LogIn className="mr-2 h-4 w-4" />
-          <span>Login</span>
+          Login
         </Link>
       </Button>
     );
-  }
+  };
 
   return (
     <div className="flex items-center gap-4 w-auto justify-end">
@@ -91,20 +84,15 @@ export function DynamicHeaderButtons() {
           </Link>
         </Button>
       ) : (
-        <ImageUploadDialog
-          open={isDialogOpen}
-          onOpenChange={setDialogOpen}
-        >
+        <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen}>
           <Button onClick={handleScanClick}>
             <Upload className="mr-2 h-4 w-4" />
             <span>Scan Product</span>
           </Button>
         </ImageUploadDialog>
       )}
-      
-      <div className="flex items-center gap-2">
-        {renderAuthButton()}
-      </div>
+
+      <div className="flex items-center gap-2">{renderAuthButtons()}</div>
     </div>
   );
 }
