@@ -124,24 +124,27 @@ export function MatrixChart({
                 }}
               >
                 {/* Quadrant Backgrounds */}
+                {/* Top-Right: Holy Grail (Green) */}
                 <ReferenceArea
                   x1={50}
                   x2={100}
-                  y1={50}
-                  y2={100}
-                  stroke="hsl(var(--primary) / 0.2)"
-                  fill="hsl(var(--primary) / 0.1)"
-                  ifOverflow="visible"
-                />
-                <ReferenceArea
-                  x1={0}
-                  x2={50}
                   y1={50}
                   y2={100}
                   stroke="hsl(var(--accent) / 0.2)"
                   fill="hsl(var(--accent) / 0.1)"
                   ifOverflow="visible"
                 />
+                {/* Top-Left: Survivor Food (Yellow/Muted) */}
+                <ReferenceArea
+                  x1={0}
+                  x2={50}
+                  y1={50}
+                  y2={100}
+                  stroke="hsl(var(--muted) / 0.3)"
+                  fill="hsl(var(--muted) / 0.2)"
+                  ifOverflow="visible"
+                />
+                {/* Bottom-Right: Russian Roulette (Red) */}
                 <ReferenceArea
                   x1={50}
                   x2={100}
@@ -151,13 +154,14 @@ export function MatrixChart({
                   fill="hsl(var(--destructive) / 0.1)"
                   ifOverflow="visible"
                 />
+                {/* Bottom-Left: The Bin (Red) */}
                 <ReferenceArea
                   x1={0}
                   x2={50}
                   y1={0}
                   y2={50}
-                  stroke="hsl(var(--muted) / 0.3)"
-                  fill="hsl(var(--muted) / 0.2)"
+                  stroke="hsl(var(--destructive) / 0.3)"
+                  fill="hsl(var(--destructive) / 0.2)"
                   ifOverflow="visible"
                 />
 
@@ -208,9 +212,9 @@ export function MatrixChart({
                     const cy = y + height / 2;
                     return (
                       <>
-                        <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--primary-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Holy Grail</text>
-                        <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Survivor Food</text>
-                        <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Bin</text>
+                        <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Holy Grail</text>
+                        <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Survivor Food</text>
+                        <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Bin</text>
                         <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Russian Roulette</text>
                       </>
                     );
