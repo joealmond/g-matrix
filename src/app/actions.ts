@@ -111,6 +111,10 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    return { success: false, error: `Failed to process image: ${error.message}` };
+    // Return the full error structure for debugging on the client
+    return { 
+        success: false, 
+        error: `Failed to process image: ${error.message}`
+    };
   }
 }
