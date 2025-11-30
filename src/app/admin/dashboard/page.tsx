@@ -11,7 +11,7 @@ import { AdminProductList } from '@/components/dashboard/admin-product-list';
 import { useAdmin } from '@/hooks/use-admin';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert } from 'lucide-react';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase';
 
 
 export default function AdminDashboardPage() {
@@ -46,10 +46,16 @@ export default function AdminDashboardPage() {
   }, [searchTerm, chartData]);
 
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      router.push('/login');
+    // Wait until loading is complete before checking auth status
+    if (!isLoading) {
+        // If there's no user or the user is not an admin, redirect
+        if (!user) {
+            router.push('/login');
+        } else if (!isAdmin) {
+            router.push('/'); // Redirect non-admins to the homepage
+        }
     }
-  }, [isLoading, isAdmin, router]);
+  }, [isLoading, user, isAdmin, router]);
 
   const handlePointClick = (productName: string) => {
     setHighlightedProduct(productName);

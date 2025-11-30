@@ -16,10 +16,16 @@ export default function AdminPage() {
     const isLoading = isAdminLoading || isUserLoading;
 
     useEffect(() => {
-        if (!isLoading && !isAdmin) {
-            router.push('/login');
+        // Wait until loading is complete before checking auth status
+        if (!isLoading) {
+            // If there's no user or the user is not an admin, redirect
+            if (!user) {
+                router.push('/login');
+            } else if (!isAdmin) {
+                router.push('/'); // Redirect non-admins to the homepage
+            }
         }
-    }, [isLoading, isAdmin, router]);
+    }, [isLoading, user, isAdmin, router]);
 
     if (isLoading) {
         return (

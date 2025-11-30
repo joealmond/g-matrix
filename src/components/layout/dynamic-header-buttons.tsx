@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, User, LogIn, Shield, LogOut } from 'lucide-react';
+import { ArrowLeft, Upload, User, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
 import { useUser, useAuth } from '@/firebase';
@@ -12,6 +12,7 @@ import { Skeleton } from '../ui/skeleton';
 
 export function DynamicHeaderButtons() {
   const pathname = usePathname();
+  const router = useRouter();
   const auth = useAuth();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const { user, isUserLoading: userLoading } = useUser();
@@ -25,7 +26,9 @@ export function DynamicHeaderButtons() {
   
   const handleLogout = () => {
     if (auth) {
-        auth.signOut();
+        auth.signOut().then(() => {
+            router.push('/');
+        });
     }
   }
 

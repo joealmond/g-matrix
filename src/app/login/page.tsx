@@ -48,7 +48,7 @@ export default function LoginPage() {
     if (isAdmin) {
       router.push('/admin/dashboard');
     } else {
-      // For now, non-admins are sent to the homepage.
+      // For non-admins, redirect to the homepage.
       router.push('/');
     }
   }, [user, isAdmin, isLoading, router]);
