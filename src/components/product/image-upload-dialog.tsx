@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CameraCapture } from './camera-capture';
 import { useRouter } from 'next/navigation';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 
 type ImageUploadDialogProps = {
   children: ReactNode;
@@ -24,16 +25,15 @@ type ImageUploadDialogProps = {
 export function ImageUploadDialog({ children, open, onOpenChange }: ImageUploadDialogProps) {
   const router = useRouter();
 
-  const handleProductIdentified = (productName: string, imageUrl: string) => {
+  const handleProductIdentified = (analysisResult: ImageAnalysisState) => {
     // Close the dialog
     onOpenChange?.(false);
     
     // Store in session storage as a fallback
-    const productData = { name: productName, imageUrl: imageUrl || '' };
-    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+    sessionStorage.setItem('identifiedProduct', JSON.stringify(analysisResult));
 
     // Navigate to the vibe check page with the product name and image URL
-    const url = `/vibe-check/${encodeURIComponent(productName)}?imageUrl=${encodeURIComponent(imageUrl)}`;
+    const url = `/vibe-check/${encodeURIComponent(analysisResult.productName || 'Unnamed Product')}`;
     router.push(url);
   };
   

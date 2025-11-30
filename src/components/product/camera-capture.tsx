@@ -11,7 +11,7 @@ import type { ImageAnalysisState } from '@/lib/actions-types';
 import { initialState } from '@/lib/actions-types';
 
 type CameraCaptureProps = {
-  onProductIdentified?: (productName: string, imageUrl: string) => void;
+  onProductIdentified?: (result: ImageAnalysisState) => void;
 };
 
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
@@ -108,14 +108,11 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
 
       const result = await analyzeAndUploadProduct(initialState, formData);
 
-      if (result.success && result.productName && result.imageUrl) {
+      if (result.success && result.productName) {
         if (onProductIdentified) {
-            onProductIdentified(result.productName, result.imageUrl);
+            onProductIdentified(result);
         } else {
-            const productData = { name: result.productName, imageUrl: result.imageUrl };
-            sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
-            const url = `/vibe-check/${encodeURIComponent(result.productName)}?imageUrl=${encodeURIComponent(result.imageUrl)}`;
-            router.push(url);
+            console.error("onProductIdentified callback not provided");
         }
       } else {
         toast({

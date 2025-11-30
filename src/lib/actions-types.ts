@@ -5,6 +5,12 @@ export type ImageAnalysisState = {
   productName?: string | null;
   productId?: string | null;
   imageUrl?: string | null;
+  aiAnalysis?: {
+    isGlutenFree: boolean;
+    riskLevel: 'Safe' | 'Sketchy' | 'Unsafe';
+    reasoning: string;
+    tags: string[];
+  } | null,
   error?: string | null;
   success: boolean;
 };
@@ -13,6 +19,7 @@ export type ImageAnalysisState = {
 export const initialState: ImageAnalysisState = {
   productName: null,
   imageUrl: null,
+  aiAnalysis: null,
   error: null,
   success: false,
 };

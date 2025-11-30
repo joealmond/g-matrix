@@ -7,16 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
-import { Terminal } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
 import { useActionState } from 'react';
 import { analyzeAndUploadProduct } from '@/app/actions';
-import { initialState } from '@/lib/actions-types';
-import { useRouter } from 'next/navigation';
+import { initialState, ImageAnalysisState } from '@/lib/actions-types';
 
 type ImageUploadFormProps = {
-  onProductIdentified?: (productName: string, imageUrl: string) => void;
+  onProductIdentified?: (result: ImageAnalysisState) => void;
 };
 
 function SubmitButton() {
@@ -30,7 +27,6 @@ function SubmitButton() {
 }
 
 export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
-  const router = useRouter();
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -40,15 +36,11 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
   const [state, formAction] = useActionState(analyzeAndUploadProduct, initialState);
 
   useEffect(() => {
-    if (state.success && state.productName && state.imageUrl) {
+    if (state.success && state.productName) {
         if (onProductIdentified) {
-            onProductIdentified(state.productName, state.imageUrl);
+            onProductIdentified(state);
         } else {
-            // Fallback navigation if the callback is not provided
-            const productData = { name: state.productName, imageUrl: state.imageUrl };
-            sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
-            const url = `/vibe-check/${encodeURIComponent(state.productName)}?imageUrl=${encodeURIComponent(state.imageUrl)}`;
-            router.push(url);
+            console.error("onProductIdentified callback not provided");
         }
         // Reset form after success
         formRef.current?.reset();
@@ -60,7 +52,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             description: state.error,
         });
     }
-  }, [state, onProductIdentified, router, toast]);
+  }, [state, onProductIdentified, toast]);
 
   const handleFile = (file: File | null | undefined) => {
     if (file) {

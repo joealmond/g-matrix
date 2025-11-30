@@ -19,9 +19,10 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, doc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import type { Vote } from '@/lib/types';
+import type { Vote, Product } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import type { ImageAnalysisState } from '@/lib/actions-types';
 
 
 const FireIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M14.5 9.5c0 .938-.443 1.75-1.125 2.25-.682.5-1.125 1.5-1.125 2.25M12 7.5c0 1.5-1 3-2 3s-2-1.5-2-3c0-1.5 1-3 2-3s2 1.5 2 3z"/><path d="M10.5 15.5c-1.5-1-2.5-2.5-2.5-4.5 0-2.5 2-5 5-5s5 2.5 5 5c0 2-1 3.5-2.5 4.5"/><path d="M12.5 18.5c-1.294-.97-2-2.36-2-3.5h-1c0 1.5.706 2.53 2 3.5s2 1.5 2 2.5c0 .5-.5 1-1 1s-1-.5-1-1c0-.5.5-1 1-1h1c0 1.105-1.119 2-2.5 2S9.5 21.605 9.5 20.5s1.119-2 2.5-2 2.5.895 2.5 2z"/></svg>;
@@ -38,14 +39,15 @@ const voteMapping = {
 };
 
 interface VotingPanelProps {
+  product: Product | null;
   productName: string;
-  productId: string;
+  analysisResult: ImageAnalysisState | null;
   onVibeSubmit?: (vibe: Vote) => void;
 }
 
-export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPanelProps) {
+export function VotingPanel({ product, productName, analysisResult, onVibeSubmit }: VotingPanelProps) {
   const [safetyVote, setSafetyVote] = useState<SafetyVote | null>(null);
-  const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
+  const [tasteVote, setTasteVote] =useState<TasteVote | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -59,44 +61,57 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
   };
   
   const handleSubmit = async () => {
-    if (!safetyVote || !tasteVote || !firestore || !productId) return;
+    if (!safetyVote || !tasteVote || !firestore || !productName || !analysisResult) return;
     
-    // Use a placeholder or anonymous ID since auth is disabled
     const userId = `anonymous_${Date.now()}`;
+    const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const productRef = doc(firestore, 'products', productId);
 
-    const vibe: Vote = {
+    const voteData: Vote = {
       userId: userId,
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
       createdAt: serverTimestamp(),
     };
 
-    const productRef = doc(firestore, 'products', productId);
-    const voteRef = doc(collection(firestore, 'products', productId, 'votes'), userId); 
-
     runTransaction(firestore, async (transaction) => {
       const productDoc = await transaction.get(productRef);
+      
       if (!productDoc.exists()) {
-        throw "Product does not exist!";
+        // --- Create Product ---
+        const newProductData = {
+            name: productName,
+            imageUrl: analysisResult.imageUrl,
+            aiAnalysis: analysisResult.aiAnalysis,
+            avgSafety: voteData.safety, // First vote sets the average
+            avgTaste: voteData.taste,
+            voteCount: 1,
+            createdAt: serverTimestamp(),
+            createdBy: userId,
+        };
+        transaction.set(productRef, newProductData);
+      } else {
+        // --- Update Existing Product ---
+        const existingProductData = productDoc.data() as Product;
+        const oldVoteCount = existingProductData.voteCount || 0;
+        const oldAvgSafety = existingProductData.avgSafety || 0;
+        const oldAvgTaste = existingProductData.avgTaste || 0;
+
+        const newVoteCount = oldVoteCount + 1;
+        const newAvgSafety = ((oldAvgSafety * oldVoteCount) + voteData.safety) / newVoteCount;
+        const newAvgTaste = ((oldAvgTaste * oldVoteCount) + voteData.taste) / newVoteCount;
+        
+        const productUpdateData = {
+          voteCount: newVoteCount,
+          avgSafety: newAvgSafety,
+          avgTaste: newAvgTaste,
+        };
+        transaction.update(productRef, productUpdateData);
       }
 
-      const productData = productDoc.data();
-      const oldVoteCount = productData.voteCount || 0;
-      const oldAvgSafety = productData.avgSafety || 0;
-      const oldAvgTaste = productData.avgTaste || 0;
-
-      const newVoteCount = oldVoteCount + 1;
-      const newAvgSafety = ((oldAvgSafety * oldVoteCount) + vibe.safety) / newVoteCount;
-      const newAvgTaste = ((oldAvgTaste * oldVoteCount) + vibe.taste) / newVoteCount;
-      
-      const productUpdateData = {
-        voteCount: newVoteCount,
-        avgSafety: newAvgSafety,
-        avgTaste: newAvgTaste,
-      };
-
-      transaction.set(voteRef, vibe);
-      transaction.update(productRef, productUpdateData);
+      // Always create a new vote document
+      const voteRef = doc(firestore, 'products', productId, 'votes', userId);
+      transaction.set(voteRef, voteData);
     })
     .then(() => {
         toast({
@@ -105,14 +120,14 @@ export function VotingPanel({ productName, productId, onVibeSubmit }: VotingPane
         })
 
         if (onVibeSubmit) {
-          onVibeSubmit(vibe as Vote);
+          onVibeSubmit(voteData as Vote);
         }
     })
     .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
           path: productRef.path,
           operation: 'write', 
-          requestResourceData: { vote: vibe },
+          requestResourceData: { vote: voteData },
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
     });

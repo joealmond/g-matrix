@@ -81,38 +81,21 @@ export async function analyzeAndUploadProduct(
     await fileUpload.makePublic();
     const publicUrl = fileUpload.publicUrl();
 
-    // --- STEP 4: SAVE TO FIRESTORE ---
-    const productName = analysis.productName || 'Unnamed Product';
-    const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const productRef = adminDb.collection('products').doc(productId);
-
-    const docSnap = await productRef.get();
-
-    if (!docSnap.exists) {
-      await productRef.set({
-        name: productName,
-        imageUrl: publicUrl,
-        aiAnalysis: {
-          isGlutenFree: analysis.isLikelyGlutenFree,
-          riskLevel: analysis.riskLevel,
-          reasoning: analysis.reasoning,
-          tags: analysis.tags,
-        },
-        avgSafety: 50,
-        avgTaste: 50,
-        voteCount: 0,
-        createdAt: new Date(),
-        createdBy: userId,
-      });
-    }
-
+    // --- STEP 4: DO NOT SAVE TO FIRESTORE. RETURN ANALYSIS TO CLIENT ---
+    
     revalidatePath('/');
 
     return {
       success: true,
-      productId,
-      productName,
+      productId: analysis.productName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      productName: analysis.productName,
       imageUrl: publicUrl,
+      aiAnalysis: {
+        isGlutenFree: analysis.isLikelyGlutenFree,
+        riskLevel: analysis.riskLevel,
+        reasoning: analysis.reasoning,
+        tags: analysis.tags,
+      },
       error: null,
     };
   } catch (error: any) {
