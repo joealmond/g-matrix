@@ -19,6 +19,7 @@ export function DynamicHeaderButtons() {
   const { isAdmin, isLoading: adminLoading } = useAdmin();
 
   const isLoading = userLoading || (user && adminLoading);
+  const isAdminPage = pathname.startsWith('/admin');
 
   const handleScanClick = () => {
     setDialogOpen(true);
@@ -41,20 +42,13 @@ export function DynamicHeaderButtons() {
     );
   }
 
-  const isSpecialPage =
-    pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/');
-
   const renderAuthButtons = () => {
     if (user) {
       return (
         <>
-          {isAdmin ? (
+          {isAdmin && !isAdminPage && (
             <Button variant="outline" asChild>
-              <Link href="/admin/dashboard">Admin</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" asChild>
-              <Link href="/">Home</Link>
+              <Link href="/admin">Admin</Link>
             </Button>
           )}
           <Button variant="ghost" onClick={handleLogout}>
@@ -73,6 +67,9 @@ export function DynamicHeaderButtons() {
       </Button>
     );
   };
+
+  const isSpecialPage =
+    pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/') || isAdminPage;
 
   return (
     <div className="flex items-center gap-4 w-auto justify-end">

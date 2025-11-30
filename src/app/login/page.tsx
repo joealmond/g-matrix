@@ -32,7 +32,7 @@ export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { user, loading: isUserLoading } = useUser();
+  const { user, isUserLoading } = useUser();
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
   const isLoading = isUserLoading || (user && isAdminLoading);
@@ -46,7 +46,7 @@ export default function LoginPage() {
 
     // Once loading is complete and we have a user object, we can redirect.
     if (isAdmin) {
-      router.push('/admin/dashboard');
+      router.push('/admin');
     } else {
       // For non-admins, redirect to the homepage.
       router.push('/');
