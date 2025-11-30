@@ -9,8 +9,6 @@ import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
-import { Button } from '../ui/button';
-import { ArrowRight } from 'lucide-react';
 
 type ProductListProps = {
   chartData: Product[];
@@ -46,39 +44,36 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
               id={`product-item-${item.name}`}
               onClick={() => onItemClick?.(item.name)}
               className={cn(
-                "flex items-center gap-4 p-2 rounded-md transition-all scroll-mt-20 cursor-pointer",
+                "rounded-md transition-all scroll-mt-20",
                 highlightedProduct === item.name ? 'bg-muted ring-2 ring-primary' : 'hover:bg-muted'
               )}
               style={{scrollMarginTop: '80px'}} // For smooth scroll offset
             >
-              <div
-                className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
-              >
-                {item?.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground"></span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold">{item.name}</p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Safety: {Math.round(item.avgSafety || 0)}%</span>
-                  <span>•</span>
-                  <span>Taste: {Math.round(item.avgTaste || 0)}%</span>
+              <Link href={`/product/${encodeURIComponent(item.name)}`} className="flex items-center gap-4 p-2 cursor-pointer">
+                <div
+                  className="h-12 w-12 rounded-md bg-muted flex-shrink-0 relative overflow-hidden"
+                >
+                  {item?.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground"></span>
+                    </div>
+                  )}
                 </div>
-              </div>
-               <Button asChild variant="ghost" size="icon">
-                  <Link href={`/product/${encodeURIComponent(item.name)}`}>
-                    <ArrowRight />
-                  </Link>
-                </Button>
+                <div className="flex-1">
+                  <p className="font-semibold">{item.name}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Safety: {Math.round(item.avgSafety || 0)}%</span>
+                    <span>•</span>
+                    <span>Taste: {Math.round(item.avgTaste || 0)}%</span>
+                  </div>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>

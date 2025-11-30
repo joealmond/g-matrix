@@ -20,7 +20,7 @@ if (!admin.apps.length) {
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
       }),
-      storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`
+      storageBucket: `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
     });
   } catch (error: any) {
     console.error("Firebase admin initialization failed:", error.message);
