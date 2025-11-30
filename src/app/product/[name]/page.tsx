@@ -91,7 +91,7 @@ export default function ProductDetailsPage() {
                       <img 
                         src={product.imageUrl} 
                         alt={`Image of ${product.name}`} 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   ) : (
