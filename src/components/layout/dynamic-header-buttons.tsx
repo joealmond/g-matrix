@@ -50,7 +50,6 @@ export function DynamicHeaderButtons() {
           {isAdmin ? (
             <Button variant="outline" asChild>
               <Link href="/admin/dashboard">
-                <Shield className="mr-2 h-4 w-4" />
                 <span>Admin</span>
               </Link>
             </Button>
