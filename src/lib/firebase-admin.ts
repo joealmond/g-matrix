@@ -1,6 +1,9 @@
 
 import 'server-only'; // Prevents this from leaking to client
 import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
+import { cert } from 'firebase-admin/app';
 
 // Check if app is already initialized to prevent "App already exists" error
 if (!admin.apps.length) {
@@ -12,7 +15,7 @@ if (!admin.apps.length) {
     }
 
     admin.initializeApp({
-      credential: admin.credential.cert({
+      credential: cert({
         projectId: process.env.FIREBASE_PROJECT_ID,
         clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
         privateKey: privateKey,
@@ -25,6 +28,7 @@ if (!admin.apps.length) {
   }
 }
 
-export const adminDb = admin.firestore();
-export const adminAuth = admin.auth();
-export const adminStorage = admin.storage();
+const app = admin.app();
+export const adminDb = getFirestore(app);
+export const adminAuth = admin.auth(app);
+export const adminStorage = getStorage(app);
