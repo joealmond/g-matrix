@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
@@ -31,27 +31,52 @@ function GoogleIcon() {
 export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
   const isLoading = isUserLoading || (user && isAdminLoading);
+  const redirectPath = searchParams.get('redirect') || '/';
 
+  // This effect handles redirection for users who are already logged in
+  // and land on the login page.
   useEffect(() => {
-    // This effect handles redirection after login.
-    // It waits until both user and admin status are resolved.
-    if (isLoading || !user) {
-      return; // Don't do anything while loading or if no user is logged in.
+    if (user && !isLoading) {
+      if (isAdmin) {
+        // If the user is an admin, redirect them to the admin page,
+        // or the originally requested page if it was also an admin page.
+        router.push(redirectPath.startsWith('/admin') ? redirectPath : '/admin');
+      } else {
+        // Non-admin users are sent to the homepage.
+        router.push('/');
+      }
     }
+  }, [user, isLoading, isAdmin, router, redirectPath]);
 
-    // Once loading is complete and we have a user object, we can redirect.
+
+  // This effect handles redirection immediately after a user signs in.
+  useEffect(() => {
+    // Wait until loading is complete and we have a user.
+    if (isLoading || !user) return;
+
     if (isAdmin) {
-      router.push('/admin');
+      toast({
+        title: "Admin Login Successful",
+        description: `Welcome back! Redirecting you to the dashboard...`,
+      });
+      // Admins are redirected to the path they were trying to access, or the main admin page.
+      router.push(redirectPath.startsWith('/admin') ? redirectPath : '/admin');
     } else {
-      // For non-admins, redirect to the homepage.
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      // Non-admins are always sent to the homepage.
       router.push('/');
     }
-  }, [user, isAdmin, isLoading, router]);
+    
+  }, [user, isAdmin, isLoading, router, toast, redirectPath]);
 
 
   const handleGoogleSignIn = async () => {
@@ -59,11 +84,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      toast({
-        title: "Login Successful",
-        description: "Welcome back! Checking your credentials...",
-      })
-      // The useEffect will handle the redirect once user and admin state are loaded.
+      // The useEffect hooks will handle the redirect once user and admin state are loaded.
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       const errorMessage = error.message || "An unknown error occurred.";
