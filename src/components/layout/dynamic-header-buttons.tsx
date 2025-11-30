@@ -76,10 +76,10 @@ export function DynamicHeaderButtons() {
   return (
     <div className="flex items-center gap-4 w-auto justify-end">
       {isSpecialPage ? (
-        <Button asChild size="icon" className="md:w-auto md:px-4">
+        <Button asChild>
           <Link href="/">
-            <ArrowLeft className="h-4 w-4 md:mr-2" />
-            <span className="sr-only md:not-sr-only">Back to Home</span>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            <span>Back to Home</span>
           </Link>
         </Button>
       ) : (
