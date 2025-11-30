@@ -48,7 +48,12 @@ export async function analyzeAndUploadProduct(
           role: 'user',
           content: [
             { type: 'text', text: 'Analyze this product image for a celiac/gluten-free community app. Identify the product precisely. If you cannot identify the product name, return "Unnamed Product".' },
-            { type: 'image', image: base64Image },
+            { 
+              type: 'image', 
+              image: base64Image,
+              // FIX: Explicitly providing the mimeType is required for some base64 implementations
+              mimeType: file.type || 'image/jpeg', 
+            },
           ],
         },
       ],
