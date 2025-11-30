@@ -37,11 +37,12 @@ export async function analyzeAndUploadProduct(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString('base64');
+    const mimeType = (file.type && file.type !== 'application/octet-stream') ? file.type : 'image/jpeg';
+
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
-    // FIX: Use 'gemini-2.0-flash-001' as it is a stable, available model.
     const { object: analysis } = await generateObject({
-      model: google('gemini-2.0-flash-001'),
+      model: google('gemini-pro-vision'),
       schema: AnalysisSchema,
       messages: [
         {
@@ -51,9 +52,7 @@ export async function analyzeAndUploadProduct(
             { 
               type: 'image', 
               image: base64Image,
-              // FIX: Ensure a valid image mimeType is always sent. 
-              // Fallback to 'image/jpeg' if the browser sends a generic type like 'application/octet-stream'.
-              mimeType: (file.type && file.type !== 'application/octet-stream') ? file.type : 'image/jpeg', 
+              mimeType: mimeType, 
             },
           ],
         },
@@ -67,7 +66,7 @@ export async function analyzeAndUploadProduct(
 
     await fileUpload.save(buffer, {
       metadata: {
-        contentType: file.type,
+        contentType: mimeType,
       },
     });
 
@@ -75,35 +74,44 @@ export async function analyzeAndUploadProduct(
     const publicUrl = fileUpload.publicUrl();
 
     // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
+    // The product name comes from the AI analysis.
     const productName = analysis.productName || 'Unnamed Product';
-    const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const productRef = adminDb.collection('products').doc(productId);
+    
+    // Only create a product if the name is not "Unnamed Product".
+    // If it is unnamed, we just return the name and URL, and the client will handle prompting the user to name it.
+    if (productName !== 'Unnamed Product') {
+        const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const productRef = adminDb.collection('products').doc(productId);
 
-    const docSnap = await productRef.get();
+        const docSnap = await productRef.get();
 
-    if (!docSnap.exists) {
-      await productRef.set({
-        name: productName,
-        imageUrl: publicUrl,
-        aiAnalysis: {
-          isGlutenFree: analysis.isLikelyGlutenFree,
-          riskLevel: analysis.riskLevel,
-          reasoning: analysis.reasoning,
-          tags: analysis.tags
-        },
-        avgSafety: 50,
-        avgTaste: 50,
-        voteCount: 0,
-        createdAt: new Date(),
-        createdBy: userId,
-      });
+        // Only create the product if it does not already exist.
+        if (!docSnap.exists) {
+            await productRef.set({
+                name: productName,
+                imageUrl: publicUrl,
+                aiAnalysis: {
+                    isGlutenFree: analysis.isLikelyGlutenFree,
+                    riskLevel: analysis.riskLevel,
+                    reasoning: analysis.reasoning,
+                    tags: analysis.tags
+                },
+                avgSafety: 50,
+                avgTaste: 50,
+                voteCount: 0,
+                createdAt: new Date(),
+                createdBy: userId,
+            });
+        }
     }
 
+
     revalidatePath('/');
+    revalidatePath(`/product/${encodeURIComponent(productName)}`);
 
     return {
       success: true,
-      productId: productId,
+      productId: productName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
       productName: productName,
       imageUrl: publicUrl,
       error: null
@@ -114,7 +122,7 @@ export async function analyzeAndUploadProduct(
     // Return a more detailed error message for debugging
     return { 
       success: false, 
-      error: `Failed to process image: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}` 
+      error: `Failed to process image: ${error.message || 'An unknown error occurred.'}`
     };
   }
 }

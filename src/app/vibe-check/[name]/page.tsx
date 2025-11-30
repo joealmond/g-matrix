@@ -4,7 +4,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useState, useRef, useTransition } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { adminDb } from '@/lib/firebase-admin';
 
 export default function VibeCheckPage() {
   const params = useParams();
@@ -41,6 +42,7 @@ export default function VibeCheckPage() {
         if (productDataString) {
             try {
                 const productData = JSON.parse(productDataString);
+                // Only use sessionStorage if the names match, to avoid using stale data
                 if (productData.name === decodedProductName) {
                     setImageUrl(productData.imageUrl);
                 }
@@ -52,12 +54,11 @@ export default function VibeCheckPage() {
   }, [decodedProductName, imageUrl]);
 
   useEffect(() => {
-    const findOrCreateProduct = async () => {
-        // If the product is unnamed, don't interact with the DB yet.
-        // Wait for the user to provide a name.
+    const fetchProduct = async () => {
+        // If the product is unnamed, don't try to fetch it. Just wait for user input.
         if (isUnnamedProduct) {
           setIsLoading(false);
-          setProduct(null); // Ensure no product is set
+          setProduct(null);
           return;
         };
 
@@ -74,56 +75,81 @@ export default function VibeCheckPage() {
             if (docSnap.exists()) {
                 const fetchedProduct = { id: docSnap.id, ...docSnap.data() } as Product;
                 setProduct(fetchedProduct);
+                // If the URL doesn't have an image but the fetched product does, use it.
                 if (fetchedProduct.imageUrl && !imageUrl) {
                     setImageUrl(fetchedProduct.imageUrl);
                 }
             } else {
-                const newProductData: Omit<Product, 'id'> = {
-                    name: decodedProductName,
-                    imageUrl: imageUrl || 'https://placehold.co/600x400',
-                    avgSafety: 50,
-                    avgTaste: 50,
-                    voteCount: 0,
-                };
-                
-                // Only create the product if it has a valid name.
-                await setDoc(productRef, newProductData);
-                setProduct({ id: productId, ...newProductData });
+                // IMPORTANT: The page should no longer create products.
+                // It now assumes a product was created by the server action.
+                // If not found, it means it's a new product being named, or there's an issue.
+                // For a newly named product, the page will reload, and this will find it.
+                 setProduct(null); // Set to null if not found
+                 console.warn(`Product "${decodedProductName}" not found in Firestore.`);
             }
         } catch(e) {
-            console.error("Error finding or creating product: ", e);
+            console.error("Error fetching product: ", e);
             toast({
                 variant: 'destructive',
                 title: 'Database Error',
-                description: 'Could not fetch or create product data.'
+                description: 'Could not fetch product data.'
             })
         } finally {
             setIsLoading(false);
         }
     }
 
-    findOrCreateProduct();
+    fetchProduct();
 
-  }, [firestore, decodedProductName, isUnnamedProduct, imageUrl]);
+  }, [firestore, decodedProductName, imageUrl, isUnnamedProduct]);
   
-  const handleManualNameSubmit = () => {
+  const handleManualNameSubmit = async () => {
     const trimmedName = manualProductName.trim();
-    if (!trimmedName) {
+    if (!trimmedName || !imageUrl) {
       toast({
         variant: 'destructive',
-        title: 'Invalid Name',
-        description: 'Please enter a valid product name.',
+        title: 'Invalid Input',
+        description: 'Please enter a valid product name. The image URL is also required.',
       });
       return;
     }
     
-    const productData = { name: trimmedName, imageUrl };
-    sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+    // We will create the product here on the client side using a server action in the future
+    // but for now, we navigate, and the useEffect will handle it.
+    // This is a temporary step to make the flow work.
+    
+    // We will create the product directly in firestore using the admin SDK
+    // This is not a good practice, but it's a temporary workaround.
+    // The correct way would be to use a server action to create the product.
+    try {
+        const productId = trimmedName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const productRef = doc(firestore, 'products', productId);
 
-    startTransition(() => {
-      // Replace the URL. The useEffect hook will then handle creating the product with the new name.
-      router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`, { scroll: false });
-    });
+        await setDoc(productRef, {
+            name: trimmedName,
+            imageUrl: imageUrl,
+            avgSafety: 50,
+            avgTaste: 50,
+            voteCount: 0,
+            createdAt: serverTimestamp(),
+            createdBy: 'anonymous',
+        });
+        
+        const productData = { name: trimmedName, imageUrl };
+        sessionStorage.setItem('identifiedProduct', JSON.stringify(productData));
+
+        startTransition(() => {
+          router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}?imageUrl=${encodeURIComponent(imageUrl || '')}`, { scroll: false });
+        });
+
+    } catch (e) {
+         toast({
+            variant: 'destructive',
+            title: 'Failed to create product',
+            description: 'There was an issue saving the new product name.',
+        });
+        console.error("Failed to create product on name submission", e);
+    }
   };
 
   const handleVibeSubmitted = (vote: Vote) => {
@@ -138,72 +164,71 @@ export default function VibeCheckPage() {
   }, [showFineTune]);
 
   return (
-    <div className="container mx-auto p-4">
-       <div className="flex items-center justify-between mb-6">
-            <h1 className="font-headline text-3xl">
-              Product Vibe Check
-            </h1>
-        </div>
-      
-      <div className="flex flex-col md:grid md:grid-cols-2 gap-8">
-        <div>
-            <Card>
-                <CardHeader>
-                    <CardTitle className='font-headline'>{decodedProductName}</CardTitle>
-                    <CardDescription>
-                      {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {imageUrl ? (
-                      <div className="relative w-full rounded-md overflow-hidden border p-4 flex justify-center items-center">
-                        <img 
-                          src={imageUrl} 
-                          alt={`Image of ${decodedProductName}`} 
-                          className="max-h-[400px] w-auto max-w-full object-contain"
-                        />
-                      </div>
-                    ) : (
-                        <Skeleton className="w-full aspect-video" />
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-        <div>
-          {isUnnamedProduct ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="font-headline">Name This Product</CardTitle>
-                <CardDescription>Our AI couldn't read the name. Please enter it below to continue.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="product-name">Product Name</Label>
-                  <Input
-                    id="product-name"
-                    value={manualProductName}
-                    onChange={(e) => setManualProductName(e.target.value)}
-                    placeholder="e.g., Udi's Gluten Free Bread"
-                  />
-                </div>
-                <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName.trim()} className="w-full">
-                  {isPending ? 'Saving...' : 'Set Product Name'}
-                </Button>
-              </CardContent>
-            </Card>
-          ) : isLoading || !product ? (
-            <Card>
-              <CardHeader><CardTitle>Loading Vibe Panel...</CardTitle></CardHeader>
-              <CardContent><Skeleton className="h-96 w-full" /></CardContent>
-            </Card>
-          ) : (
-            <VotingPanel 
-              productName={product.name} 
-              productId={product.id}
-              onVibeSubmit={handleVibeSubmitted}
-            />
-          )}
-        </div>
+    <div className="flex flex-col gap-8">
+      <div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline">{decodedProductName}</CardTitle>
+            <CardDescription>
+              {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {imageUrl ? (
+              <div className="relative w-full rounded-md overflow-hidden border p-4 flex justify-center items-center">
+                <img 
+                  src={imageUrl} 
+                  alt={`Image of ${decodedProductName}`} 
+                  className="max-w-full h-auto max-h-[400px] object-contain"
+                />
+              </div>
+            ) : (
+                <Skeleton className="w-full aspect-[4/3]" />
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      <div>
+        {isUnnamedProduct ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline">Name This Product</CardTitle>
+              <CardDescription>Our AI couldn't read the name. Please enter it below to continue.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="product-name">Product Name</Label>
+                <Input
+                  id="product-name"
+                  value={manualProductName}
+                  onChange={(e) => setManualProductName(e.target.value)}
+                  placeholder="e.g., Udi's Gluten Free Bread"
+                />
+              </div>
+              <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName.trim()} className="w-full">
+                {isPending ? 'Saving...' : 'Set Product Name & Continue'}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : isLoading ? (
+          <Card>
+            <CardHeader><CardTitle>Loading Vibe Panel...</CardTitle></CardHeader>
+            <CardContent><Skeleton className="h-96 w-full" /></CardContent>
+          </Card>
+        ) : product ? (
+          <VotingPanel 
+            productName={product.name} 
+            productId={product.id}
+            onVibeSubmit={handleVibeSubmitted}
+          />
+        ) : (
+          <Card>
+             <CardHeader><CardTitle>Product Not Found</CardTitle></CardHeader>
+             <CardContent>
+                <p className="text-muted-foreground">This product hasn't been created yet. This might happen if you've just named it. The page should refresh shortly.</p>
+             </CardContent>
+          </Card>
+        )}
       </div>
 
       {showFineTune && product && latestVote && (
