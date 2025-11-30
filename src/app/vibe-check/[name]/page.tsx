@@ -55,11 +55,13 @@ export default function VibeCheckPage() {
     const findOrCreateProduct = async () => {
         // If the product is unnamed, don't interact with the DB yet.
         // Wait for the user to provide a name.
-        if (!firestore || !decodedProductName || isUnnamedProduct) {
+        if (isUnnamedProduct) {
           setIsLoading(false);
           setProduct(null); // Ensure no product is set
           return;
         };
+
+        if (!firestore || !decodedProductName) return;
 
         setIsLoading(true);
 
@@ -147,7 +149,7 @@ export default function VibeCheckPage() {
         <div>
             <Card>
                 <CardHeader>
-                    <CardTitle className='font-headline'>{isUnnamedProduct ? 'Unnamed Product' : decodedProductName}</CardTitle>
+                    <CardTitle className='font-headline'>{decodedProductName}</CardTitle>
                     <CardDescription>
                       {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
                     </CardDescription>
@@ -162,7 +164,7 @@ export default function VibeCheckPage() {
                         />
                       </div>
                     ) : (
-                        <Skeleton className="w-full aspect-square" />
+                        <Skeleton className="w-full aspect-video" />
                     )}
                 </CardContent>
             </Card>
@@ -184,7 +186,7 @@ export default function VibeCheckPage() {
                     placeholder="e.g., Udi's Gluten Free Bread"
                   />
                 </div>
-                <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName} className="w-full">
+                <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName.trim()} className="w-full">
                   {isPending ? 'Saving...' : 'Set Product Name'}
                 </Button>
               </CardContent>
