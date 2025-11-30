@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
+import { useAdmin } from '@/hooks/use-admin';
 
 function GoogleIcon() {
   return (
@@ -30,13 +31,23 @@ export default function LoginPage() {
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, loading: isUserLoading } = useUser();
+  const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
   useEffect(() => {
-    if (user) {
-      router.push('/account');
+    // Wait until we know the user's admin status
+    if (isUserLoading || isAdminLoading) {
+      return;
     }
-  }, [user, router]);
+    
+    if (user) {
+      if (isAdmin) {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/account');
+      }
+    }
+  }, [user, isUserLoading, isAdmin, isAdminLoading, router]);
 
 
   const handleGoogleSignIn = async () => {
@@ -46,9 +57,9 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       toast({
         title: "Login Successful",
-        description: "Welcome back!",
+        description: "Welcome back! Redirecting...",
       })
-      router.push('/account');
+      // The useEffect will handle the redirect.
     } catch (error: any) {
       console.error('Error during sign-in:', error);
       const errorMessage = error.message || "An unknown error occurred.";
