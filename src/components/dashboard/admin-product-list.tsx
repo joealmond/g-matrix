@@ -25,6 +25,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type AdminProductListProps = {
   chartData: Product[];
@@ -37,23 +39,30 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const handleDelete = async (productId: string, productName: string) => {
+    const handleDelete = (productId: string, productName: string) => {
         if (!firestore) return;
+        
         const productRef = doc(firestore, 'products', productId);
-        try {
-            await deleteDoc(productRef);
-            toast({
-                title: 'Product Deleted',
-                description: `"${productName}" has been successfully deleted.`,
+
+        // Do not await the promise. Chain a .catch() to handle errors non-blockingly.
+        deleteDoc(productRef)
+            .then(() => {
+                toast({
+                    title: 'Product Deleted',
+                    description: `"${productName}" has been successfully deleted.`,
+                });
+            })
+            .catch(async (serverError) => {
+                // Create the rich, contextual error for debugging.
+                const permissionError = new FirestorePermissionError({
+                    path: productRef.path,
+                    operation: 'delete',
+                });
+
+                // Emit the error to be caught by the global FirebaseErrorListener.
+                // Do not use console.error or show a toast here.
+                errorEmitter.emit('permission-error', permissionError);
             });
-        } catch (error) {
-            console.error("Error deleting product: ", error);
-            toast({
-                variant: 'destructive',
-                title: 'Error Deleting Product',
-                description: 'There was a problem deleting the product.',
-            });
-        }
     };
 
   return (
