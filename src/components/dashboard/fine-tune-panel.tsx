@@ -12,7 +12,7 @@ import type { Product, Vote } from '@/lib/types';
 import { ProductVibeChart } from './product-vibe-chart';
 import { DraggableDot } from './draggable-dot';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import {
@@ -53,7 +53,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
   }
 
   const handleSubmit = useCallback(async () => {
-    if (!firestore || !userId) return;
+    if (!firestore || !userId || !initialVote) return;
     setIsSubmitting(true);
 
     const productRef = doc(firestore, 'products', product.id);
@@ -67,35 +67,27 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
         }
 
         const productData = productDoc.data() as Product;
+        const voteCount = productData.voteCount || 1;
         
-        let newAvgSafety = vibe.safety;
-        let newAvgTaste = vibe.taste;
-        let newVoteCount = productData.voteCount || 0;
+        // This logic assumes we are ALWAYS updating a previous vote, which is correct for fine-tuning
+        // First, subtract the initial "rough" vote from the averages
+        const totalSafety = (productData.avgSafety * voteCount) - initialVote.safety;
+        const totalTaste = (productData.avgTaste * voteCount) - initialVote.taste;
 
-        if (initialVote && newVoteCount > 0) {
-          // Calculate new averages by first removing the initial vote and then adding the new one
-          const oldTotalSafety = productData.avgSafety * newVoteCount - initialVote.safety;
-          const oldTotalTaste = productData.avgTaste * newVoteCount - initialVote.taste;
-          newAvgSafety = (oldTotalSafety + vibe.safety) / newVoteCount;
-          newAvgTaste = (oldTotalTaste + vibe.taste) / newVoteCount;
-        } else {
-          newVoteCount += 1;
-          newAvgSafety = ((productData.avgSafety * (newVoteCount -1) ) + vibe.safety) / newVoteCount;
-          newAvgTaste = ((productData.avgTaste * (newVoteCount -1) ) + vibe.taste) / newVoteCount;
-        }
-
+        // Then, add the new "fine-tuned" vote
+        const newAvgSafety = (totalSafety + vibe.safety) / voteCount;
+        const newAvgTaste = (totalTaste + vibe.taste) / voteCount;
 
         transaction.update(productRef, {
           avgSafety: newAvgSafety,
           avgTaste: newAvgTaste,
-          voteCount: newVoteCount,
         });
 
+        // Update the user's vote document with the fine-tuned values
         transaction.set(
           voteRef,
           {
             ...vibe,
-            createdAt: initialVote?.createdAt || serverTimestamp(), // Keep original timestamp if it exists
             updatedAt: serverTimestamp(),
           },
           { merge: true }
@@ -118,7 +110,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [firestore, userId, product.id, initialVote, vibe, toast, product.avgSafety, product.avgTaste, product.voteCount]);
+  }, [firestore, userId, product.id, product.voteCount, product.avgSafety, product.avgTaste, initialVote, vibe, toast]);
 
   return (
     <Card>

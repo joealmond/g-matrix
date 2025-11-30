@@ -1,10 +1,10 @@
 'use client';
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect, useState, useRef, useTransition } from 'react';
+import { useEffect, useState, useRef, useTransition, useCallback } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,7 +91,7 @@ export default function VibeCheckPage() {
 
   }, [firestore, decodedProductName, imageUrl, isUnnamedProduct]);
   
-  const handleManualNameSubmit = async () => {
+  const handleManualNameSubmit = useCallback(async () => {
     const trimmedName = manualProductName.trim();
     if (!trimmedName || !analysisResult) {
       toast({
@@ -108,12 +108,23 @@ export default function VibeCheckPage() {
     startTransition(() => {
       router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}`, { scroll: false });
     });
-  };
+  }, [analysisResult, manualProductName, router]);
 
-  const handleVibeSubmitted = (vote: Vote) => {
+  const handleVibeSubmitted = useCallback(async (vote: Vote) => {
     setLatestVote(vote);
+
+    if (!product && firestore) {
+      // If product was just created, we need to fetch it to show the fine-tune panel
+      const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const productRef = doc(firestore, 'products', productId);
+      const docSnap = await getDoc(productRef);
+      if (docSnap.exists()) {
+        setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
+      }
+    }
+    
     setShowFineTune(true);
-  };
+  }, [product, firestore, decodedProductName]);
 
   useEffect(() => {
     if (showFineTune && fineTuneRef.current) {
