@@ -9,7 +9,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
-import { GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, User } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase/auth/use-user';
+import { useEffect } from 'react';
 
 function GoogleIcon() {
   return (
@@ -24,14 +28,34 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user) {
+      router.push('/account');
+    }
+  }, [user, router]);
+
 
   const handleGoogleSignIn = async () => {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      })
+      router.push('/account');
     } catch (error) {
       console.error('Error during sign-in:', error);
+       toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: "Could not sign you in with Google. Please try again.",
+      })
     }
   };
 
@@ -43,7 +67,7 @@ export default function LoginPage() {
             Sign In
           </CardTitle>
           <CardDescription>
-            Sign in to your account to continue.
+            Sign in with Google to continue.
           </CardDescription>
         </CardHeader>
         <CardContent>
