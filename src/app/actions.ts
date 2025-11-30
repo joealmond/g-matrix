@@ -42,7 +42,7 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
-      model: google('gemini-pro-vision'),
+      model: google('gemini-1.5-flash-latest'),
       schema: AnalysisSchema,
       messages: [
         {
