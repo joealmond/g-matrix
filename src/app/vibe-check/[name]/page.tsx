@@ -26,26 +26,23 @@ export default function VibeCheckPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // The image URL now comes from the server action result, passed via query param or session storage
   const [imageUrl, setImageUrl] = useState(searchParams.get('imageUrl') || null);
   
   const [showFineTune, setShowFineTune] = useState(false);
   const [latestVote, setLatestVote] = useState<Vote | null>(null);
   const fineTuneRef = useRef<HTMLDivElement>(null);
   
-  const [productName, setProductName] = useState(decodeURIComponent(params.name as string));
   const [manualProductName, setManualProductName] = useState('');
   
+  const productName = decodeURIComponent(params.name as string);
   const isUnnamedProduct = productName === 'Unnamed Product' || !productName;
 
   useEffect(() => {
-    // If the imageUrl is not in the URL, check sessionStorage as a fallback.
     if (!imageUrl) {
         const productDataString = sessionStorage.getItem('identifiedProduct');
         if (productDataString) {
             try {
                 const productData = JSON.parse(productDataString);
-                // Only use it if the name matches the current page context
                 if (productData.name === productName) {
                     setImageUrl(productData.imageUrl);
                 }
@@ -74,13 +71,10 @@ export default function VibeCheckPage() {
             if (docSnap.exists()) {
                 const fetchedProduct = { id: docSnap.id, ...docSnap.data() } as Product;
                 setProduct(fetchedProduct);
-                // If the fetched product has a better image URL, use it.
                 if (fetchedProduct.imageUrl && !imageUrl) {
                     setImageUrl(fetchedProduct.imageUrl);
                 }
             } else {
-                // This logic might be deprecated if server action always creates the product.
-                // It's here as a fallback.
                 const newProductData: Omit<Product, 'id'> = {
                     name: productName,
                     imageUrl: imageUrl || 'https://placehold.co/600x400',
