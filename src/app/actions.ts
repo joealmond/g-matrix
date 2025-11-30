@@ -1,19 +1,17 @@
 'use server';
 
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 
-// Define the structure we want Gemini to return
 const AnalysisSchema = z.object({
-  productName: z.string().describe('The specific brand name and product name visible on the packaging. If not found, return "Unnamed Product".'),
-  isLikelyGlutenFree: z.boolean().describe('True if the packaging explicitly says Gluten Free or is naturally gluten free'),
-  riskLevel: z.enum(['Safe', 'Sketchy', 'Unsafe']).describe('Based on ingredients or GF certification logos visible'),
-  tags: z.array(z.string()).describe('Short tags like "Bread", "Snack", "Certified GF"'),
-  reasoning: z.string().describe('Short explanation of why it was classified this way'),
+  productName: z.string(),
+  isLikelyGlutenFree: z.boolean(),
+  riskLevel: z.enum(['Safe', 'Sketchy', 'Unsafe']),
+  tags: z.array(z.string()),
+  reasoning: z.string(),
 });
 
 export async function analyzeAndUploadProduct(
@@ -24,101 +22,101 @@ export async function analyzeAndUploadProduct(
     const file = formData.get('image') as File;
     const userId = 'anonymous';
 
-    // 1. Check API Key
     if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env.local");
+      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY");
     }
 
     if (!file || file.size === 0) {
       return { success: false, error: 'No image file provided' };
     }
 
-    // --- STEP 1: PREPARE IMAGE FOR AI ---
+    // --- STEP 1: PREPARE IMAGE ---
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString('base64');
-    const mimeType = (file.type && file.type !== 'application/octet-stream') ? file.type : 'image/jpeg';
 
+    // --- STEP 2: USE GOOGLE GENERATIVE AI DIRECTLY ---
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
-    const { object: analysis } = await generateObject({
-      model: google('gemini-pro-vision'),
-      schema: AnalysisSchema,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: 'Analyze this product image for a celiac/gluten-free community app. Identify the product precisely. If you cannot identify the product name, return "Unnamed Product".' },
-            { 
-              type: 'image', 
-              image: base64Image,
-              mimeType: mimeType, 
-            },
-          ],
+    const prompt = `Analyze this product image for a celiac/gluten-free community app. 
+    Return a JSON object with these exact fields:
+    - productName: string (the brand and product name visible on packaging, or "Unnamed Product" if unknown)
+    - isLikelyGlutenFree: boolean (true if packaging says Gluten Free or product is naturally GF)
+    - riskLevel: "Safe" | "Sketchy" | "Unsafe" (based on ingredients or GF certification)
+    - tags: string[] (e.g., ["Bread", "Snack", "Certified GF"])
+    - reasoning: string (short explanation of classification)
+    
+    Return ONLY valid JSON, no markdown code blocks.`;
+
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType: file.type || 'image/jpeg',
+          data: base64Image,
         },
-      ],
-    });
+      },
+    ]);
 
-    // --- STEP 3: UPLOAD IMAGE TO FIREBASE STORAGE (ADMIN SDK) ---
+    const responseText = result.response.text();
+    
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not parse AI response as JSON');
+    }
+    
+    const analysis = AnalysisSchema.parse(JSON.parse(jsonMatch[0]));
+
+    // --- STEP 3: UPLOAD TO FIREBASE STORAGE ---
     const bucket = adminStorage.bucket();
     const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
     const fileUpload = bucket.file(fileName);
 
     await fileUpload.save(buffer, {
-      metadata: {
-        contentType: mimeType,
-      },
+      metadata: { contentType: file.type },
     });
 
     await fileUpload.makePublic();
     const publicUrl = fileUpload.publicUrl();
 
-    // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
+    // --- STEP 4: SAVE TO FIRESTORE ---
     const productName = analysis.productName || 'Unnamed Product';
-    
-    if (productName !== 'Unnamed Product') {
-        const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const productRef = adminDb.collection('products').doc(productId);
+    const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const productRef = adminDb.collection('products').doc(productId);
 
-        const docSnap = await productRef.get();
+    const docSnap = await productRef.get();
 
-        if (!docSnap.exists) {
-            await productRef.set({
-                name: productName,
-                imageUrl: publicUrl,
-                aiAnalysis: {
-                    isGlutenFree: analysis.isLikelyGlutenFree,
-                    riskLevel: analysis.riskLevel,
-                    reasoning: analysis.reasoning,
-                    tags: analysis.tags
-                },
-                avgSafety: 50,
-                avgTaste: 50,
-                voteCount: 0,
-                createdAt: new Date(),
-                createdBy: userId,
-            });
-        }
+    if (!docSnap.exists) {
+      await productRef.set({
+        name: productName,
+        imageUrl: publicUrl,
+        aiAnalysis: {
+          isGlutenFree: analysis.isLikelyGlutenFree,
+          riskLevel: analysis.riskLevel,
+          reasoning: analysis.reasoning,
+          tags: analysis.tags,
+        },
+        avgSafety: 50,
+        avgTaste: 50,
+        voteCount: 0,
+        createdAt: new Date(),
+        createdBy: userId,
+      });
     }
 
-
     revalidatePath('/');
-    revalidatePath(`/product/${encodeURIComponent(productName)}`);
 
     return {
       success: true,
-      productId: productName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-      productName: productName,
+      productId,
+      productName,
       imageUrl: publicUrl,
-      error: null
+      error: null,
     };
-
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    // Return a more detailed error message for debugging
-    return { 
-      success: false, 
-      error: `Failed to process image: ${error.message || 'An unknown error occurred.'}`
-    };
+    return { success: false, error: `Failed to process image: ${error.message}` };
   }
 }
