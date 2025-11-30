@@ -31,12 +31,12 @@ export function DynamicHeaderButtons() {
     pathname.startsWith('/vibe-check/') || pathname.startsWith('/product/');
 
   return (
-    <div className="flex items-center gap-4 w-[150px] justify-end">
+    <div className="flex items-center gap-4 w-auto justify-end">
       {isSpecialPage ? (
-        <Button asChild>
+        <Button asChild size="icon" className="md:w-auto md:px-4">
           <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            <ArrowLeft className="h-4 w-4 md:mr-2" />
+            <span className="sr-only md:not-sr-only">Back to Home</span>
           </Link>
         </Button>
       ) : (
