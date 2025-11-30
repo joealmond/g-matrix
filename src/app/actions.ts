@@ -41,7 +41,7 @@ export async function analyzeAndUploadProduct(
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     // FIX 1: Use 'gemini-1.5-flash-latest' to ensure we hit a valid endpoint.
     const { object: analysis } = await generateObject({
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-1.5-flash-latest'),
       schema: AnalysisSchema,
       messages: [
         {
