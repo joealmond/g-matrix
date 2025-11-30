@@ -26,9 +26,9 @@ export async function analyzeAndUploadProduct(
     const userId = 'anonymous'; // Optional tracking
 
     // 1. Safety Check for API Key
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      throw new Error("Missing GEMINI_API_KEY in .env file");
+      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
     }
 
     if (!file || file.size === 0) {
