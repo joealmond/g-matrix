@@ -21,7 +21,7 @@ export default function AdminPage() {
   const firestore = useFirestore();
 
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
-  const { user, isUserLoading } = useUser();
+  const { user, loading: isUserLoading } = useUser();
   const router = useRouter();
 
   const isLoading = isAdminLoading || isUserLoading;
@@ -29,7 +29,7 @@ export default function AdminPage() {
   useEffect(() => {
     // This effect handles redirection for unauthenticated users.
     if (!isLoading && !user) {
-      router.push('/login');
+      router.push('/');
     }
   }, [user, isLoading, router]);
 

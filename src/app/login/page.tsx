@@ -37,16 +37,16 @@ function LoginContent() {
 
   // This effect handles redirection immediately after a user signs in.
   useEffect(() => {
-    // Wait until loading is complete and we have a user.
-    if (isUserLoading || !user) return;
+    if (isUserLoading) return;
 
-    toast({
-      title: "Login Successful",
-      description: "Welcome back! Redirecting you to the admin dashboard...",
-    });
-    // Always redirect to the main admin page.
-    router.push('/admin');
-    
+    if (user) {
+        toast({
+            title: "Login Successful",
+            description: "Welcome back! Redirecting you to the admin dashboard...",
+        });
+        // Always redirect to the main admin page.
+        router.push('/admin');
+    }
   }, [user, isUserLoading, router, toast]);
 
 

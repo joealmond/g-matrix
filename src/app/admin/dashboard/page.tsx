@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     // This effect handles redirection for unauthenticated users.
     if (!isLoading && !user) {
-      router.push('/login');
+      router.push('/');
     }
   }, [user, isLoading, router]);
 
