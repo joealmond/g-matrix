@@ -1,4 +1,3 @@
-
 'use server';
 
 import { adminDb, adminStorage } from '@/lib/firebase-admin';
@@ -27,9 +26,9 @@ export async function analyzeAndUploadProduct(
     const userId = 'anonymous'; // Optional tracking
 
     // 1. Safety Check for API Key
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
+      throw new Error("Missing GEMINI_API_KEY in .env file");
     }
 
     if (!file || file.size === 0) {
@@ -59,18 +58,28 @@ export async function analyzeAndUploadProduct(
     });
 
     // --- STEP 3: UPLOAD IMAGE TO FIREBASE STORAGE (ADMIN SDK) ---
-    const bucket = adminStorage.bucket(); 
-    const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
-    const fileUpload = bucket.file(fileName);
+    let publicUrl: string;
+    try {
+        const bucket = adminStorage.bucket(); 
+        const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        const fileUpload = bucket.file(fileName);
 
-    await fileUpload.save(buffer, {
-      metadata: { 
-        contentType: file.type,
-      },
-    });
-    
-    await fileUpload.makePublic();
-    const publicUrl = fileUpload.publicUrl();
+        await fileUpload.save(buffer, {
+            metadata: { 
+                contentType: file.type,
+            },
+        });
+        
+        await fileUpload.makePublic();
+        publicUrl = fileUpload.publicUrl();
+    } catch (storageError: any) {
+        console.error('Firebase Storage Error:', storageError);
+        const serviceAccountEmail = process.env.FIREBASE_CLIENT_EMAIL;
+        throw new Error(
+            `Failed to upload to Firebase Storage. This is likely a permissions issue. Please ensure your service account ('${serviceAccountEmail}') has the 'Storage Object Admin' role in Google Cloud IAM. Original error: ${storageError.message}`
+        );
+    }
+
 
     // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
     const productName = analysis.productName || 'Unnamed Product';
