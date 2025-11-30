@@ -2,7 +2,7 @@
 import { AdSlot } from '@/components/dashboard/ad-slot';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductSearch } from '@/components/dashboard/product-search';
-import { useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemo, useState, useEffect } from 'react';
@@ -11,6 +11,7 @@ import { AdminProductList } from '@/components/dashboard/admin-product-list';
 import { useAdmin } from '@/hooks/use-admin';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert } from 'lucide-react';
+import { useUser } from '@/firebase/auth/use-user';
 
 
 export default function AdminDashboardPage() {

@@ -13,7 +13,7 @@ export function DynamicHeaderButtons() {
   const pathname = usePathname();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { user, loading: userLoading } = useUser();
+  const { user, isUserLoading: userLoading } = useUser();
   const { isAdmin, isLoading: adminLoading } = useAdmin();
 
   useEffect(() => {
