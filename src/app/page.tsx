@@ -46,22 +46,20 @@ export default function Home() {
   };
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-3">
         <AdSlot />
       </div>
-      <div className="lg:col-span-3">
+      <div className="lg:col-span-2">
         <MatrixChart
           chartData={filteredData || []}
           onPointClick={handlePointClick}
           highlightedProduct={highlightedProduct}
         />
       </div>
-      <div className="lg:col-span-3">
-        <ProductSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
-      </div>
-      <div className="lg:col-span-3">
-        <ProductList
+      <div className="lg:col-span-1 flex flex-col gap-6">
+         <ProductSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
+         <ProductList
           chartData={filteredData || []}
           loading={loading}
           onItemClick={handleItemClick}
