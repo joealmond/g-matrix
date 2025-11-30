@@ -1,13 +1,53 @@
-import { Shield } from "lucide-react";
+'use client';
+
+import { Shield, ShieldAlert, Loader2 } from "lucide-react";
+import { useAdmin } from "@/hooks/use-admin";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/firebase";
 
 export default function AdminPage() {
+    const { isAdmin, isLoading: isAdminLoading } = useAdmin();
+    const { user, loading: isUserLoading } = useUser();
+    const router = useRouter();
+
+    const isLoading = isAdminLoading || isUserLoading;
+
+    useEffect(() => {
+        if (!isLoading && !isAdmin) {
+            router.push('/login');
+        }
+    }, [isLoading, isAdmin, router]);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    if (!isAdmin) {
+       return (
+         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-full">
+            <div className="flex flex-col items-center gap-1 text-center">
+                <ShieldAlert className="h-16 w-16 text-destructive" />
+                <h3 className="text-2xl font-bold tracking-tight font-headline">Access Denied</h3>
+                <p className="text-sm text-muted-foreground">
+                    You do not have permission to view this page. Redirecting...
+                </p>
+            </div>
+        </div>
+       )
+    }
+
     return (
         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm h-full">
             <div className="flex flex-col items-center gap-1 text-center">
                 <Shield className="h-16 w-16 text-muted-foreground" />
                 <h3 className="text-2xl font-bold tracking-tight font-headline">Admin Panel</h3>
                 <p className="text-sm text-muted-foreground">
-                    This section is for moderators and admins to manage reports and users.
+                    Welcome, admin! Manage reports and users here.
                 </p>
             </div>
         </div>

@@ -1,12 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { type User } from 'firebase/auth';
+import { useFirebase } from '../provider';
 
-// Mock user hook since auth is disabled
+// This hook now directly uses the authentication state from the central Firebase provider.
 export function useUser() {
-  const [user] = useState<User | null>(null);
-  const [loading] = useState(false); // Not loading since we aren't fetching
-
-  return { user, loading };
+    const { user, isUserLoading, userError } = useFirebase();
+    return { user, loading: isUserLoading, error: userError };
 }
