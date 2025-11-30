@@ -39,9 +39,10 @@ export async function analyzeAndUploadProduct(
     const base64Image = buffer.toString('base64');
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
-    // FIX 1: Use 'gemini-1.5-flash-latest' to ensure we hit a valid endpoint.
+    // FIX 1: Use 'gemini-2.5-flash' from your latest stable models list.
+    // This is the standard multimodal model for image analysis + text reasoning.
     const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash-latest'),
+      model: google('gemini-2.5-flash'),
       schema: AnalysisSchema,
       messages: [
         {
@@ -111,10 +112,6 @@ export async function analyzeAndUploadProduct(
 
   } catch (error: any) {
     console.error('Server Action Error:', error);
-    // Return the full error structure for debugging on the client
-    return { 
-        success: false, 
-        error: `Failed to process image: ${error.message}`
-    };
+    return { success: false, error: `Failed to process image: ${error.message}` };
   }
 }
