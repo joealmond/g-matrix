@@ -87,11 +87,11 @@ export default function ProductDetailsPage() {
               </CardHeader>
               <CardContent>
                   {product?.imageUrl ? (
-                    <div className="relative w-full rounded-md overflow-hidden border">
+                    <div className="relative w-full rounded-md overflow-hidden border aspect-[4/3] max-h-[500px]">
                       <img 
                         src={product.imageUrl} 
                         alt={`Image of ${product.name}`} 
-                        className="w-full h-full object-contain aspect-square"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : (
