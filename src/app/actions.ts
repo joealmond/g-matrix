@@ -42,7 +42,7 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
-      model: google('gemini-1.5-flash-latest'),
+      model: google('gemini-pro-vision'),
       schema: AnalysisSchema,
       messages: [
         {
@@ -74,18 +74,14 @@ export async function analyzeAndUploadProduct(
     const publicUrl = fileUpload.publicUrl();
 
     // --- STEP 4: SAVE TO FIRESTORE (ADMIN SDK) ---
-    // The product name comes from the AI analysis.
     const productName = analysis.productName || 'Unnamed Product';
     
-    // Only create a product if the name is not "Unnamed Product".
-    // If it is unnamed, we just return the name and URL, and the client will handle prompting the user to name it.
     if (productName !== 'Unnamed Product') {
         const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
         const productRef = adminDb.collection('products').doc(productId);
 
         const docSnap = await productRef.get();
 
-        // Only create the product if it does not already exist.
         if (!docSnap.exists) {
             await productRef.set({
                 name: productName,
