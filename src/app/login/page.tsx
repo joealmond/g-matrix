@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -28,7 +29,7 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const auth = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -37,23 +38,7 @@ export default function LoginPage() {
   const { isAdmin, isLoading: isAdminLoading } = useAdmin();
 
   const isLoading = isUserLoading || (user && isAdminLoading);
-  const redirectPath = searchParams.get('redirect') || '/';
-
-  // This effect handles redirection for users who are already logged in
-  // and land on the login page.
-  useEffect(() => {
-    if (user && !isLoading) {
-      if (isAdmin) {
-        // If the user is an admin, redirect them to the admin page,
-        // or the originally requested page if it was also an admin page.
-        router.push(redirectPath.startsWith('/admin') ? redirectPath : '/admin');
-      } else {
-        // Non-admin users are sent to the homepage.
-        router.push('/');
-      }
-    }
-  }, [user, isLoading, isAdmin, router, redirectPath]);
-
+  const redirectPath = searchParams.get('redirect');
 
   // This effect handles redirection immediately after a user signs in.
   useEffect(() => {
@@ -63,16 +48,16 @@ export default function LoginPage() {
     if (isAdmin) {
       toast({
         title: "Admin Login Successful",
-        description: `Welcome back! Redirecting you to the dashboard...`,
+        description: `Welcome back! Redirecting you...`,
       });
       // Admins are redirected to the path they were trying to access, or the main admin page.
-      router.push(redirectPath.startsWith('/admin') ? redirectPath : '/admin');
+      router.push(redirectPath || '/admin');
     } else {
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       });
-      // Non-admins are always sent to the homepage.
+      // Non-admins are sent to the homepage.
       router.push('/');
     }
     
@@ -137,5 +122,21 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+
+// Wrap in Suspense for Next.js 15 compatibility
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
