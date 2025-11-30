@@ -25,7 +25,8 @@ export async function analyzeAndUploadProduct(
     const userId = 'anonymous'; 
 
     // 1. Standard Safety Check
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
       throw new Error("Missing GOOGLE_GENERATIVE_AI_API_KEY in .env file");
     }
 
@@ -40,7 +41,9 @@ export async function analyzeAndUploadProduct(
 
     // --- STEP 2: ASK GEMINI (AI ANALYSIS) ---
     const { object: analysis } = await generateObject({
-      model: google('gemini-pro'), 
+      model: google('gemini-pro', {
+        apiKey: apiKey, // Explicitly pass the API key
+      }), 
       schema: AnalysisSchema,
       messages: [
         {
