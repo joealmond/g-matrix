@@ -3,9 +3,6 @@
     "findYourVibe": "Találd meg a hangulatod",
     "searchPlaceholder": "Keress egy gluténmentes terméket..."
   },
-  "AppLayout": {
-    "gMatrix": "G-Matrix"
-  },
   "DynamicHeaderButtons": {
     "admin": "Admin",
     "logout": "Kijelentkezés",
