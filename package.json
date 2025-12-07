@@ -57,6 +57,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@swc/helpers": "^0.5.17",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
