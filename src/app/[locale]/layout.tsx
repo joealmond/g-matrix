@@ -1,8 +1,11 @@
+
 import type { Metadata } from 'next';
-import './globals.css';
+import '../globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
+import {NextIntlClientProvider} from 'next-intl';
+import {getMessages, setRequestLocale} from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: 'G-Matrix: Gluten-Free Vibe Check',
@@ -10,13 +13,18 @@ export const metadata: Metadata = {
     'Find gluten-free products and check their vibe with community ratings.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+  params: {locale}
+}: {
   children: React.ReactNode;
-}>) {
+  params: {locale: string};
+}) {
+  setRequestLocale(locale);
+  const messages = await getMessages();
+
   return (
-    <html lang="en" className="dark">
+    <html lang={locale} className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -30,10 +38,12 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          <AppLayout>{children}</AppLayout>
-        </FirebaseClientProvider>
-        <Toaster />
+        <NextIntlClientProvider messages={messages}>
+          <FirebaseClientProvider>
+            <AppLayout>{children}</AppLayout>
+          </FirebaseClientProvider>
+          <Toaster />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

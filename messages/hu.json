@@ -1,0 +1,16 @@
+{
+  "ProductSearch": {
+    "findYourVibe": "Találd meg a hangulatod",
+    "searchPlaceholder": "Keress egy gluténmentes terméket..."
+  },
+  "AppLayout": {
+    "gMatrix": "G-Matrix"
+  },
+  "DynamicHeaderButtons": {
+    "admin": "Admin",
+    "logout": "Kijelentkezés",
+    "login": "Bejelentkezés",
+    "backToHome": "Vissza a főoldalra",
+    "scanProduct": "Termék beolvasása"
+  }
+}

@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react';
 import { DynamicHeaderButtons } from './dynamic-header-buttons';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-
   return (
     <div className="flex min-h-screen w-full flex-col">
       <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur-sm md:px-6 z-40">

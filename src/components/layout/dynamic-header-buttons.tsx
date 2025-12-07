@@ -9,8 +9,11 @@ import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
 import { Skeleton } from '../ui/skeleton';
+import { LanguageSwitcher } from './language-switcher';
+import { useTranslations } from 'next-intl';
 
 export function DynamicHeaderButtons() {
+  const t = useTranslations('DynamicHeaderButtons');
   const pathname = usePathname();
   const router = useRouter();
   const auth = useAuth();
@@ -50,12 +53,12 @@ export function DynamicHeaderButtons() {
         <>
           {isAdmin && !isAdminPage && (
             <Button variant="outline" asChild>
-              <Link href="/admin">Admin</Link>
+              <Link href="/admin">{t('admin')}</Link>
             </Button>
           )}
           <Button variant="ghost" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            {t('logout')}
           </Button>
         </>
       );
@@ -64,7 +67,7 @@ export function DynamicHeaderButtons() {
       <Button variant="outline" asChild>
         <Link href="/login">
           <LogIn className="mr-2 h-4 w-4" />
-          Login
+          {t('login')}
         </Link>
       </Button>
     );
@@ -79,19 +82,22 @@ export function DynamicHeaderButtons() {
         <Button asChild>
           <Link href="/">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            <span>Back to Home</span>
+            <span>{t('backToHome')}</span>
           </Link>
         </Button>
       ) : (
         <ImageUploadDialog open={isDialogOpen} onOpenChange={setDialogOpen}>
           <Button onClick={handleScanClick}>
             <Upload className="mr-2 h-4 w-4" />
-            <span>Scan Product</span>
+            <span>{t('scanProduct')}</span>
           </Button>
         </ImageUploadDialog>
       )}
 
-      <div className="flex items-center gap-2">{renderAuthButtons()}</div>
+      <div className="flex items-center gap-2">
+        <LanguageSwitcher />
+        {renderAuthButtons()}
+      </div>
     </div>
   );
 }
