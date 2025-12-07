@@ -1,16 +1,5 @@
 {
-  "ProductSearch": {
-    "findYourVibe": "Find Your Vibe",
-    "searchPlaceholder": "Search for a gluten-free product..."
-  },
-  "AppLayout": {
-    "gMatrix": "G-Matrix"
-  },
-  "DynamicHeaderButtons": {
-    "admin": "Admin",
-    "logout": "Logout",
-    "login": "Login",
-    "backToHome": "Back to Home",
-    "scanProduct": "Scan Product"
-  }
+    "Index": {
+        "title": "hello"
+    }
 }

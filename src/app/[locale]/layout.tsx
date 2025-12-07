@@ -5,8 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
 import {NextIntlClientProvider} from 'next-intl';
-import {getMessages} from 'next-intl/server';
-import {unstable_setRequestLocale} from 'next-intl/server';
+import {getMessages, setRequestLocale} from 'next-intl/server';
 
 export const metadata: Metadata = {
   title: 'G-Matrix: Gluten-Free Vibe Check',
@@ -16,12 +15,13 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-  params: {locale}
+  params
 }: {
   children: React.ReactNode;
   params: {locale: string};
 }) {
-  unstable_setRequestLocale(locale);
+  const {locale} = params;
+  setRequestLocale(locale);
   const messages = await getMessages();
 
   return (
