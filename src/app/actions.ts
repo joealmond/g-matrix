@@ -99,7 +99,10 @@ export async function analyzeAndUploadProduct(
       error: null,
     };
   } catch (error: any) {
-    console.error('Server Action Error:', error);
+    console.error('Server Action Error:', error); // Keep detailed log
+    if (error.message?.includes('429')) {
+      return { success: false, error: 'Rate limit exceeded. Please wait a moment and try again.' };
+    }
     return { success: false, error: `Failed to process image: ${error.message}` };
   }
 }
