@@ -130,13 +130,15 @@
         "photoLabel": "Product Photo",
         "clickToUpload": "Click to upload",
         "orDragDrop": "or drag and drop",
-        "fileTypes": "PNG, JPG, WEBP (MAX. 5MB)",
+        "fileTypes": "PNG, JPG, WEBP",
         "imagePreview": "Image preview",
         "analyzing": "Analyzing...",
         "analyzeButton": "Analyze Image",
         "analysisFailed": "Analysis Failed",
         "fileTooLarge": "File Too Large",
-        "fileTooLargeDesc": "Please upload an image smaller than 5MB."
+        "fileTooLargeDesc": "Please upload an image smaller than 5MB.",
+        "imageTooSmall": "Image Too Small",
+        "imageTooSmallDesc": "Please upload an image at least 200x200 pixels."
     },
     "CameraCapture": {
         "cameraAccessDenied": "Camera Access Denied",

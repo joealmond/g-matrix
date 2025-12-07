@@ -1,6 +1,7 @@
 import '../globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
+import { AdminGuard } from '@/components/layout/admin-guard';
 import { FirebaseClientProvider } from '@/firebase';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getLocale } from 'next-intl/server';
@@ -32,7 +33,9 @@ export default async function AdminLayout({
       <body className="font-body antialiased">
         <NextIntlClientProvider messages={messages}>
           <FirebaseClientProvider>
-            <AppLayout>{children}</AppLayout>
+            <AdminGuard>
+              <AppLayout>{children}</AppLayout>
+            </AdminGuard>
           </FirebaseClientProvider>
           <Toaster />
         </NextIntlClientProvider>

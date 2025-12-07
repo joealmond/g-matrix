@@ -11,42 +11,39 @@ import type { ImageAnalysisState } from '@/lib/actions-types';
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
+// In-memory rate limiting map
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+
 async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number }> {
-  if (!adminDb) {
-    // If Firestore is not available, allow the request but log a warning
-    console.warn('Rate limiting skipped: Firestore not available');
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS };
-  }
-
   const now = Date.now();
-  const rateLimitRef = adminDb.collection('rate_limits').doc(ip.replace(/[./]/g, '_'));
+  const record = rateLimitMap.get(ip);
 
-  try {
-    const doc = await rateLimitRef.get();
-    const data = doc.data();
-
-    if (data) {
-      const windowStart = data.windowStart as number;
-      const count = data.count as number;
-
-      // Check if we're still in the same window
-      if (now - windowStart < RATE_LIMIT_WINDOW_MS) {
-        if (count >= RATE_LIMIT_MAX_REQUESTS) {
-          return { allowed: false, remaining: 0 };
-        }
-        // Increment counter
-        await rateLimitRef.update({ count: count + 1 });
-        return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - count - 1 };
+  if (record) {
+    if (now - record.windowStart < RATE_LIMIT_WINDOW_MS) {
+      if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+        return { allowed: false, remaining: 0 };
       }
+      record.count += 1;
+      return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
+    } else {
+      // Reset window
+      record.windowStart = now;
+      record.count = 1;
+      return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
     }
-
-    // Start a new window
-    await rateLimitRef.set({ windowStart: now, count: 1 });
+  } else {
+    rateLimitMap.set(ip, { windowStart: now, count: 1 });
+    
+    // Simple cleanup to prevent memory leaks
+    if (rateLimitMap.size > 10000) {
+        for (const [key, val] of rateLimitMap.entries()) {
+            if (now - val.windowStart > RATE_LIMIT_WINDOW_MS) {
+                rateLimitMap.delete(key);
+            }
+        }
+    }
+    
     return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
-  } catch (error) {
-    console.error('Rate limit check failed:', error);
-    // On error, allow the request but log it
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS };
   }
 }
 

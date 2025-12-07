@@ -3,4 +3,4 @@ runConfig:
   maxInstances: 2      # Limit max instances for POC
   concurrency: 80      # Default concurrency
   cpu: 1               # Minimum CPU
-  memoryMiB: 512       # Minimum memory
+  memoryMiB: 1024      # Minimum memory

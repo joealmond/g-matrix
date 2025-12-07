@@ -130,13 +130,15 @@
         "photoLabel": "Termékkép",
         "clickToUpload": "Kattints a feltöltéshez",
         "orDragDrop": "vagy húzd ide",
-        "fileTypes": "PNG, JPG, WEBP (MAX. 5MB)",
+        "fileTypes": "PNG, JPG, WEBP",
         "imagePreview": "Kép előnézet",
         "analyzing": "Elemzés...",
         "analyzeButton": "Kép elemzése",
         "analysisFailed": "Elemzés sikertelen",
         "fileTooLarge": "Túl nagy fájl",
-        "fileTooLargeDesc": "Kérlek tölts fel 5MB-nál kisebb képet."
+        "fileTooLargeDesc": "Kérlek tölts fel 5MB-nál kisebb képet.",
+        "imageTooSmall": "Túl kicsi kép",
+        "imageTooSmallDesc": "Kérlek tölts fel legalább 200x200 pixeles képet."
     },
     "CameraCapture": {
         "cameraAccessDenied": "Kamera hozzáférés megtagadva",

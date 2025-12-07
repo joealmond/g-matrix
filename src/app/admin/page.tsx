@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import { AdSlot } from '@/components/dashboard/ad-slot';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductSearch } from '@/components/dashboard/product-search';
-import { useCollection, useMemoFirebase } from '@/firebase';
+import { useCollectionOnce, useMemoFirebase } from '@/firebase';
 import { collection, query, limit } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemo, useState, useEffect } from 'react';
@@ -43,7 +43,7 @@ export default function AdminPage() {
   }, [firestore]);
 
   const { data: chartData, isLoading: productsLoading } =
-    useCollection<Product>(productsCollection);
+    useCollectionOnce<Product>(productsCollection);
 
   const filteredData = useMemo(() => {
     if (!chartData) return [];

@@ -56,9 +56,72 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     }
   }, [state, onProductIdentified, toast]);
 
-  const handleFile = (file: File | null | undefined) => {
+  const processImage = async (file: File): Promise<File | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const width = img.width;
+        const height = img.height;
+
+        if (width < 200 || height < 200) {
+          toast({
+            variant: 'destructive',
+            title: t('imageTooSmall'),
+            description: t('imageTooSmallDesc'),
+          });
+          resolve(null);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        let newWidth = width;
+        let newHeight = height;
+        const MAX_SIZE = 1024;
+
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          if (width > height) {
+            newWidth = MAX_SIZE;
+            newHeight = (height / width) * MAX_SIZE;
+          } else {
+            newHeight = MAX_SIZE;
+            newWidth = (width / height) * MAX_SIZE;
+          }
+        }
+
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            resolve(file);
+            return;
+        }
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(newFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/webp', 0.8);
+      };
+      img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(null);
+      };
+    });
+  };
+
+  const handleFile = async (file: File | null | undefined) => {
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      if (file.size > 20 * 1024 * 1024) { // 20MB limit check before processing
         toast({
           variant: 'destructive',
           title: t('fileTooLarge'),
@@ -70,11 +133,29 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
         }
         return;
       }
+      
+      const processedFile = await processImage(file);
+
+      if (!processedFile) {
+        setPreview(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
+      // Update the input with the processed file
+      if (fileInputRef.current) {
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(processedFile);
+          fileInputRef.current.files = dataTransfer.files;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
     } else {
       setPreview(null);
     }
@@ -101,17 +182,12 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
     e.stopPropagation();
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (fileInputRef.current) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        fileInputRef.current.files = dataTransfer.files;
-    }
-    handleFile(file);
+    await handleFile(file);
   };
 
   return (
