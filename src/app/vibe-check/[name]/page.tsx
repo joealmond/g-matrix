@@ -14,8 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import type { ImageAnalysisState } from '@/lib/actions-types';
+import { useTranslations } from 'next-intl';
 
 export default function VibeCheckPage() {
+  const t = useTranslations('VibeCheck');
   const params = useParams();
   const router = useRouter();
   const firestore = useFirestore();
@@ -79,8 +81,8 @@ export default function VibeCheckPage() {
             console.error("Error fetching product: ", e);
             toast({
                 variant: 'destructive',
-                title: 'Database Error',
-                description: 'Could not fetch product data.'
+                title: t('databaseError'),
+                description: t('couldNotFetchProduct')
             })
         } finally {
             setIsLoading(false);
@@ -96,8 +98,8 @@ export default function VibeCheckPage() {
     if (!trimmedName || !analysisResult) {
       toast({
         variant: 'destructive',
-        title: 'Invalid Input',
-        description: 'Please enter a valid product name.',
+        title: t('invalidInputTitle'),
+        description: t('invalidInputDescription'),
       });
       return;
     }
@@ -132,14 +134,14 @@ export default function VibeCheckPage() {
     }
   }, [showFineTune]);
 
-  return (
+return (
     <div className="flex flex-col gap-8">
       <div>
         <Card>
           <CardHeader>
             <CardTitle className="font-headline">{decodedProductName}</CardTitle>
             <CardDescription>
-              {isUnnamedProduct ? 'We couldn’t identify this product. Please name it.' : 'The product identified from your image.'}
+              {isUnnamedProduct ? t('unnamedProductDescription') : t('identifiedProductDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -161,27 +163,27 @@ export default function VibeCheckPage() {
         {isUnnamedProduct ? (
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline">Name This Product</CardTitle>
-              <CardDescription>Our AI couldn't read the name. Please enter it below to continue.</CardDescription>
+              <CardTitle className="font-headline">{t('nameThisProduct')}</CardTitle>
+              <CardDescription>{t('aiCouldntRead')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="product-name">Product Name</Label>
+                <Label htmlFor="product-name">{t('productNameLabel')}</Label>
                 <Input
                   id="product-name"
                   value={manualProductName}
                   onChange={(e) => setManualProductName(e.target.value)}
-                  placeholder="e.g., Udi's Gluten Free Bread"
+                  placeholder={t('productNamePlaceholder')}
                 />
               </div>
               <Button onClick={handleManualNameSubmit} disabled={isPending || !manualProductName.trim()} className="w-full">
-                {isPending ? 'Saving...' : 'Set Product Name & Continue'}
+                {isPending ? t('saving') : t('setProductNameContinue')}
               </Button>
             </CardContent>
           </Card>
         ) : isLoading ? (
           <Card>
-            <CardHeader><CardTitle>Loading Vibe Panel...</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t('loadingVibePanel')}</CardTitle></CardHeader>
             <CardContent><Skeleton className="h-96 w-full" /></CardContent>
           </Card>
         ) : (

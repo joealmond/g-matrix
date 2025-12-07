@@ -22,6 +22,7 @@ import {
 import { Slider } from '../ui/slider';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
+import { useTranslations } from 'next-intl';
 
 interface FineTunePanelProps {
   product: Product;
@@ -36,6 +37,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const t = useTranslations('FineTunePanel');
   
   // Use a placeholder or anonymous ID since auth is disabled
   const userId = `anonymous_${Date.now()}`;
@@ -94,8 +96,8 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
         );
       });
       toast({
-        title: "Fine-tune complete!",
-        description: "Your detailed rating has been saved."
+        title: t('fineTuneComplete'),
+        description: t('fineTuneCompleteDesc')
       })
     } catch (e: any) {
       const permissionError = new FirestorePermissionError({
@@ -115,9 +117,9 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Fine-Tune Your Vibe</CardTitle>
+        <CardTitle className="font-headline">{t('title')}</CardTitle>
         <CardDescription>
-          Drag the dot or use the sliders to precisely place this product on the G-Matrix.
+          {t('description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -131,7 +133,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
         </div>
         <div className="space-y-4 pt-4">
             <div>
-                <Label htmlFor="safety-slider" className="mb-2 block">Safety: {vibe.safety}%</Label>
+                <Label htmlFor="safety-slider" className="mb-2 block">{t('safetyLabel', { value: vibe.safety })}</Label>
                 <Slider
                     id="safety-slider"
                     value={[vibe.safety]}
@@ -142,7 +144,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
                 />
             </div>
              <div>
-                <Label htmlFor="taste-slider" className="mb-2 block">Taste: {vibe.taste}%</Label>
+                <Label htmlFor="taste-slider" className="mb-2 block">{t('tasteLabel', { value: vibe.taste })}</Label>
                 <Slider
                     id="taste-slider"
                     value={[vibe.taste]}
@@ -156,7 +158,7 @@ export function FineTunePanel({ product, initialVote }: FineTunePanelProps) {
       </CardContent>
       <CardFooter>
         <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full">
-            {isSubmitting ? 'Submitting...' : 'Submit Fine-Tuned Vibe'}
+            {isSubmitting ? t('submitting') : t('submitButton')}
         </Button>
       </CardFooter>
     </Card>

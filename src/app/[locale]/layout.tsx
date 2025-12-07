@@ -1,11 +1,10 @@
-
 import type { Metadata } from 'next';
 import '../globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
 import {NextIntlClientProvider} from 'next-intl';
-import {getMessages, setRequestLocale} from 'next-intl/server';
+import {getMessages, setRequestLocale, getTranslations} from 'next-intl/server';
 import {routing} from '@/i18n/routing';
 import { notFound } from 'next/navigation';
 
@@ -13,11 +12,15 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({locale}));
 }
 
-export const metadata: Metadata = {
-  title: 'G-Matrix: Gluten-Free Vibe Check',
-  description:
-    'Find gluten-free products and check their vibe with community ratings.',
-};
+export async function generateMetadata({params}: {params: Promise<{locale: string}>}): Promise<Metadata> {
+  const {locale} = await params;
+  const t = await getTranslations({locale, namespace: 'Metadata'});
+  
+  return {
+    title: t('title'),
+    description: t('description'),
+  };
+}
 
 export default async function RootLayout({
   children,

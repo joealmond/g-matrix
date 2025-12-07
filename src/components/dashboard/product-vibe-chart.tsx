@@ -17,10 +17,12 @@ import {
   ReferenceArea,
   ScatterChart,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 
 export function ProductVibeChart() {
   const isMobile = useIsMobile();
+  const t = useTranslations('MatrixChart');
   
   const chartConfig = {
     safety: {
@@ -102,7 +104,7 @@ export function ProductVibeChart() {
                 tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
               >
                 <Label
-                  value="Was it good?"
+                  value={t('tasteAxisLabel')}
                   offset={-15}
                   position="insideBottom"
                   fill="hsl(var(--foreground))"
@@ -119,7 +121,7 @@ export function ProductVibeChart() {
                 tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
               >
                 <Label
-                  value="Did you survive?"
+                  value={t('safetyAxisLabel')}
                   angle={-90}
                   offset={isMobile ? 0 : 10}
                   position="insideLeft"
@@ -135,10 +137,10 @@ export function ProductVibeChart() {
                   const cy = y + height / 2;
                   return (
                     <>
-                      <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Holy Grail</text>
-                      <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Survivor Food</text>
-                      <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Bin</text>
-                      <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Russian Roulette</text>
+                      <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('holyGrail')}</text>
+                      <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('survivorFood')}</text>
+                      <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('theBin')}</text>
+                      <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('russianRoulette')}</text>
                     </>
                   );
                 }}

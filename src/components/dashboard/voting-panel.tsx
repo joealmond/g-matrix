@@ -23,6 +23,7 @@ import type { Vote, Product } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import type { ImageAnalysisState } from '@/lib/actions-types';
+import { useTranslations } from 'next-intl';
 
 
 const FireIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M14.5 9.5c0 .938-.443 1.75-1.125 2.25-.682.5-1.125 1.5-1.125 2.25M12 7.5c0 1.5-1 3-2 3s-2-1.5-2-3c0-1.5 1-3 2-3s2 1.5 2 3z"/><path d="M10.5 15.5c-1.5-1-2.5-2.5-2.5-4.5 0-2.5 2-5 5-5s5 2.5 5 5c0 2-1 3.5-2.5 4.5"/><path d="M12.5 18.5c-1.294-.97-2-2.36-2-3.5h-1c0 1.5.706 2.53 2 3.5s2 1.5 2 2.5c0 .5-.5 1-1 1s-1-.5-1-1c0-.5.5-1 1-1h1c0 1.105-1.119 2-2.5 2S9.5 21.605 9.5 20.5s1.119-2 2.5-2 2.5.895 2.5 2z"/></svg>;
@@ -50,6 +51,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
   const [tasteVote, setTasteVote] =useState<TasteVote | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const t = useTranslations('VotingPanel');
 
 
   const handleSafetyVote = (vote: SafetyVote) => {
@@ -115,8 +117,8 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
     })
     .then(() => {
         toast({
-            title: "Vibe Submitted!",
-            description: `Your vibe for ${productName} has been recorded. Now you can fine-tune it.`,
+            title: t('vibeSubmitted'),
+            description: t('vibeSubmittedDesc', { productName }),
         })
 
         if (onVibeSubmit) {
@@ -137,12 +139,12 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Vibe Check</CardTitle>
-        <CardDescription>How was your experience with this product?</CardDescription>
+        <CardTitle className="font-headline">{t('title')}</CardTitle>
+        <CardDescription>{t('description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <h3 className="mb-2 font-semibold text-center">Did you survive?</h3>
+          <h3 className="mb-2 font-semibold text-center">{t('safetyQuestion')}</h3>
           <div className="grid grid-cols-3 gap-2">
             <Button
               variant="outline"
@@ -151,7 +153,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <ShieldCheck className="h-8 w-8 text-green-500" />
               <span className={cn("font-semibold", safetyVote === 'Clean' ? 'text-green-400' : 'group-hover:text-green-400')}>
-                Clean
+                {t('clean')}
               </span>
             </Button>
             <Button
@@ -161,7 +163,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <ShieldAlert className="h-8 w-8 text-yellow-500" />
               <span className={cn("font-semibold", safetyVote === 'Sketchy' ? 'text-yellow-400' : 'group-hover:text-yellow-400')}>
-                Sketchy
+                {t('sketchy')}
               </span>
             </Button>
             <Button
@@ -171,13 +173,13 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <ShieldX className="h-8 w-8 text-red-500" />
               <span className={cn("font-semibold", safetyVote === 'Wrecked' ? 'text-red-400' : 'group-hover:text-red-400')}>
-                Wrecked
+                {t('wrecked')}
               </span>
             </Button>
           </div>
         </div>
         <div>
-          <h3 className="mb-2 font-semibold text-center">Was it good?</h3>
+          <h3 className="mb-2 font-semibold text-center">{t('tasteQuestion')}</h3>
           <div className="grid grid-cols-3 gap-2">
              <Button
               variant="outline"
@@ -186,7 +188,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <FireIcon />
               <span className={cn("font-semibold", tasteVote === 'Yass' ? 'text-primary' : 'group-hover:text-primary')}>
-                Yass
+                {t('yass')}
               </span>
             </Button>
             <Button
@@ -196,7 +198,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <MehIcon />
               <span className={cn("font-semibold", tasteVote === 'Meh' ? 'text-foreground' : 'group-hover:text-foreground')}>
-                Meh
+                {t('meh')}
               </span>
             </Button>
             <Button
@@ -206,7 +208,7 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
             >
               <IceIcon />
               <span className={cn("font-semibold", tasteVote === 'Pass' ? 'text-destructive' : 'group-hover:text-destructive')}>
-                Pass
+                {t('pass')}
               </span>
             </Button>
           </div>
@@ -214,11 +216,11 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
       </CardContent>
       <CardFooter className="flex-col gap-4">
          <Button onClick={handleSubmit} disabled={!safetyVote || !tasteVote} className="w-full">
-          Submit Vibe
+          {t('submitVibe')}
         </Button>
          <Button variant="link" className="text-muted-foreground w-full">
           <Flag className="mr-2 h-4 w-4" />
-          Report Product
+          {t('reportProduct')}
         </Button>
       </CardFooter>
     </Card>

@@ -26,6 +26,7 @@ import {
   ReferenceArea,
   ZAxis,
 } from 'recharts';
+import { useTranslations } from 'next-intl';
 
 export const chartColors = [
   '#8884d8',
@@ -90,6 +91,7 @@ export function MatrixChart({
   onPointClick,
 }: MatrixChartProps) {
   const isMobile = useIsMobile();
+  const t = useTranslations('MatrixChart');
   
   const dataWithCoords = chartData
     .filter(item => item.avgTaste !== undefined && item.avgSafety !== undefined)
@@ -100,11 +102,11 @@ export function MatrixChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">G-Matrix</CardTitle>
+        <CardTitle className="font-headline">{t('title')}</CardTitle>
         <CardDescription className="flex items-center gap-1">
-          <span>Product Safety</span>
+          <span>{t('safetyLabel')}</span>
           <ArrowUp className="h-4 w-4" />
-          <span>vs. Taste</span>
+          <span>{t('vsLabel')}</span>
           <ArrowRight className="h-4 w-4" />
         </CardDescription>
       </CardHeader>
@@ -179,7 +181,7 @@ export function MatrixChart({
                   tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
                 >
                   <Label
-                    value="Was it good?"
+                    value={t('tasteAxisLabel')}
                     offset={-15}
                     position="insideBottom"
                     fill="hsl(var(--foreground))"
@@ -196,7 +198,7 @@ export function MatrixChart({
                   tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
                 >
                   <Label
-                    value="Did you survive?"
+                    value={t('safetyAxisLabel')}
                     angle={-90}
                     offset={isMobile ? 0 : 10}
                     position="insideLeft"
@@ -212,10 +214,10 @@ export function MatrixChart({
                     const cy = y + height / 2;
                     return (
                       <>
-                        <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Holy Grail</text>
-                        <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Survivor Food</text>
-                        <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">The Bin</text>
-                        <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">Russian Roulette</text>
+                        <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('holyGrail')}</text>
+                        <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('survivorFood')}</text>
+                        <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('theBin')}</text>
+                        <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('russianRoulette')}</text>
                       </>
                     );
                   }}

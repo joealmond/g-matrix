@@ -12,8 +12,10 @@ import { useAdmin } from '@/hooks/use-admin';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { useUser } from '@/firebase';
+import { useTranslations } from 'next-intl';
 
 export default function AdminPage() {
+  const t = useTranslations('Admin');
   const [highlightedProduct, setHighlightedProduct] = useState<string | null>(
     null
   );
@@ -67,7 +69,7 @@ export default function AdminPage() {
     return (
       <div className="flex flex-1 items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
-        <p className="ml-4 text-muted-foreground">Verifying admin access...</p>
+        <p className="ml-4 text-muted-foreground">{t('verifyingAdminAccess')}</p>
       </div>
     );
   }
@@ -79,10 +81,10 @@ export default function AdminPage() {
         <div className="flex flex-col items-center gap-1 text-center">
           <ShieldAlert className="h-16 w-16 text-destructive" />
           <h3 className="text-2xl font-bold tracking-tight font-headline">
-            Access Denied
+            {t('accessDeniedTitle')}
           </h3>
           <p className="text-sm text-muted-foreground">
-            You do not have permission to view this page.
+            {t('accessDeniedDescription')}
           </p>
         </div>
       </div>

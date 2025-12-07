@@ -1,6 +1,6 @@
 'use client';
 
-import {useLocale} from 'next-intl';
+import {useLocale, useTranslations} from 'next-intl';
 import {usePathname, useRouter} from '@/i18n/routing';
 import {routing} from '@/i18n/routing';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ export default function LocaleSwitcher() {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations('LanguageSwitcher');
   const [isOpen, setIsOpen] = useState(false);
 
   const handleChange = (newLocale: string) => {
@@ -32,7 +33,7 @@ export default function LocaleSwitcher() {
               className="w-full justify-start"
               onClick={() => handleChange(loc)}
             >
-              {loc === 'en' ? 'English' : 'Magyar'}
+              {loc === 'en' ? t('english') : t('hungarian')}
             </Button>
           ))}
         </div>

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 function GoogleIcon() {
   return (
@@ -29,6 +30,7 @@ function GoogleIcon() {
 }
 
 function LoginContent() {
+  const t = useTranslations('Login');
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -41,13 +43,13 @@ function LoginContent() {
 
     if (user) {
         toast({
-            title: "Login Successful",
-            description: "Welcome back! Redirecting you to the admin dashboard...",
+            title: t('loginSuccessTitle'),
+            description: t('loginSuccessDescription'),
         });
         // Always redirect to the main admin page.
         router.push('/admin');
     }
-  }, [user, isUserLoading, router, toast]);
+  }, [user, isUserLoading, router, toast, t]);
 
 
   const handleGoogleSignIn = async () => {
@@ -61,8 +63,8 @@ function LoginContent() {
       const errorMessage = error.message || "An unknown error occurred.";
       toast({
         variant: "destructive",
-        title: "Login Failed",
-        description: `Could not sign you in with Google. Reason: ${errorMessage}`,
+        title: t('loginFailedTitle'),
+        description: t('loginFailedDescription', { error: errorMessage }),
       })
     }
   };
@@ -72,7 +74,7 @@ function LoginContent() {
      return (
         <div className="flex flex-1 items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
-            <p className="ml-4 text-muted-foreground">Verifying credentials...</p>
+            <p className="ml-4 text-muted-foreground">{t('verifyingCredentials')}</p>
         </div>
     );
   }
@@ -83,7 +85,7 @@ function LoginContent() {
     return (
        <div className="flex flex-1 items-center justify-center">
            <Loader2 className="h-16 w-16 animate-spin text-muted-foreground" />
-            <p className="ml-4 text-muted-foreground">Redirecting...</p>
+            <p className="ml-4 text-muted-foreground">{t('redirecting')}</p>
        </div>
    );
   }
@@ -94,16 +96,16 @@ function LoginContent() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="font-headline text-2xl">
-            Sign In
+            {t('signInTitle')}
           </CardTitle>
           <CardDescription>
-            Sign in with Google to continue to the admin dashboard.
+            {t('signInDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button onClick={handleGoogleSignIn} className="w-full">
             <GoogleIcon />
-            <span>Sign in with Google</span>
+            <span>{t('signInWithGoogle')}</span>
           </Button>
         </CardContent>
       </Card>

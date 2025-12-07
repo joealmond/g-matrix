@@ -1,6 +1,7 @@
 {
-    "Index": {
-        "title": "hello"
+    "Metadata": {
+        "title": "G-Matrix: Gluten-Free Vibe Check",
+        "description": "Find gluten-free products and check their vibe with community ratings."
     },
     "ProductSearch": {
         "findYourVibe": "Find Your Vibe",
@@ -12,5 +13,150 @@
         "login": "Login",
         "backToHome": "Back to Home",
         "scanProduct": "Scan Product"
+    },
+    "Login": {
+        "verifyingCredentials": "Verifying credentials...",
+        "redirecting": "Redirecting...",
+        "signInTitle": "Sign In",
+        "signInDescription": "Sign in with Google to continue to the admin dashboard.",
+        "signInWithGoogle": "Sign in with Google",
+        "loginSuccessTitle": "Login Successful",
+        "loginSuccessDescription": "Welcome back! Redirecting you to the admin dashboard...",
+        "loginFailedTitle": "Login Failed",
+        "loginFailedDescription": "Could not sign you in with Google. Reason: {error}"
+    },
+    "Admin": {
+        "verifyingAdminAccess": "Verifying admin access...",
+        "accessDeniedTitle": "Access Denied",
+        "accessDeniedDescription": "You do not have permission to view this page."
+    },
+    "ProductPage": {
+        "productNotFound": "Product not found",
+        "productNotFoundDescription": "The product \"{name}\" could not be found.",
+        "productDetails": "Product Details",
+        "communitySourcedVibe": "Community-sourced vibe for this product.",
+        "noImage": "No Image",
+        "overallVibe": "Overall Vibe",
+        "basedOnVotes": "Based on {count} votes.",
+        "averageSafety": "Average Safety",
+        "averageTaste": "Average Taste",
+        "excellent": "Excellent",
+        "good": "Good",
+        "fair": "Fair",
+        "poor": "Poor"
+    },
+    "VibeCheck": {
+        "unnamedDescription": "We couldn't identify this product. Please name it.",
+        "identifiedDescription": "The product identified from your image.",
+        "nameThisProduct": "Name This Product",
+        "aiCouldntRead": "Our AI couldn't read the name. Please enter it below to continue.",
+        "productNameLabel": "Product Name",
+        "productNamePlaceholder": "e.g., Udi's Gluten Free Bread",
+        "saving": "Saving...",
+        "setProductNameContinue": "Set Product Name & Continue",
+        "loadingVibePanel": "Loading Vibe Panel...",
+        "databaseError": "Database Error",
+        "couldNotFetchProduct": "Could not fetch product data.",
+        "invalidInputTitle": "Invalid Input",
+        "invalidInputDescription": "Please enter a valid product name."
+    },
+    "MatrixChart": {
+        "title": "G-Matrix",
+        "safetyLabel": "Product Safety",
+        "vsLabel": "vs. Taste",
+        "tasteAxisLabel": "Was it good?",
+        "safetyAxisLabel": "Did you survive?",
+        "holyGrail": "The Holy Grail",
+        "survivorFood": "Survivor Food",
+        "theBin": "The Bin",
+        "russianRoulette": "Russian Roulette"
+    },
+    "ProductList": {
+        "title": "Product Details",
+        "noProducts": "No products found.",
+        "scanToStart": "Scan a product to get started!",
+        "safety": "Safety: {value}%",
+        "taste": "Taste: {value}%"
+    },
+    "AdminProductList": {
+        "title": "Product Management",
+        "noProducts": "No products found.",
+        "scanToStart": "Scan a product to get started!",
+        "safety": "Safety: {value}%",
+        "taste": "Taste: {value}%",
+        "delete": "Delete",
+        "confirmDeleteTitle": "Are you absolutely sure?",
+        "confirmDeleteDesc": "This action cannot be undone. This will permanently delete the product and all its associated votes and reports.",
+        "cancel": "Cancel",
+        "productDeleted": "Product Deleted",
+        "productDeletedDesc": "\"{productName}\" has been successfully deleted."
+    },
+    "VotingPanel": {
+        "title": "Vibe Check",
+        "description": "How was your experience with this product?",
+        "safetyQuestion": "Did you survive?",
+        "clean": "Clean",
+        "sketchy": "Sketchy",
+        "wrecked": "Wrecked",
+        "tasteQuestion": "Was it good?",
+        "yass": "Yass",
+        "meh": "Meh",
+        "pass": "Pass",
+        "submitVibe": "Submit Vibe",
+        "reportProduct": "Report Product",
+        "vibeSubmitted": "Vibe Submitted!",
+        "vibeSubmittedDesc": "Your vibe for {productName} has been recorded. Now you can fine-tune it."
+    },
+    "FineTunePanel": {
+        "title": "Fine-Tune Your Vibe",
+        "description": "Drag the dot or use the sliders to precisely place this product on the G-Matrix.",
+        "safetyLabel": "Safety: {value}%",
+        "tasteLabel": "Taste: {value}%",
+        "submitting": "Submitting...",
+        "submitButton": "Submit Fine-Tuned Vibe",
+        "fineTuneComplete": "Fine-tune complete!",
+        "fineTuneCompleteDesc": "Your detailed rating has been saved."
+    },
+    "AdSlot": {
+        "placeholder": "Future Ad Slot"
+    },
+    "ImageUploadDialog": {
+        "title": "Scan a Product",
+        "description": "Upload a photo or use your camera to scan a product, and we'll try to identify it for you.",
+        "uploadTab": "Upload Photo",
+        "cameraTab": "Use Camera"
+    },
+    "ImageUploadForm": {
+        "photoLabel": "Product Photo",
+        "clickToUpload": "Click to upload",
+        "orDragDrop": "or drag and drop",
+        "fileTypes": "PNG, JPG, WEBP (MAX. 5MB)",
+        "imagePreview": "Image preview",
+        "analyzing": "Analyzing...",
+        "analyzeButton": "Analyze Image",
+        "analysisFailed": "Analysis Failed",
+        "fileTooLarge": "File Too Large",
+        "fileTooLargeDesc": "Please upload an image smaller than 5MB."
+    },
+    "CameraCapture": {
+        "cameraAccessDenied": "Camera Access Denied",
+        "cameraAccessDeniedDesc": "Please enable camera permissions in your browser settings.",
+        "cameraNotSupported": "Camera Not Supported",
+        "cameraNotSupportedDesc": "Your browser does not support camera access.",
+        "captureFailed": "Capture Failed",
+        "captureFailedDesc": "Could not capture image. Please try again.",
+        "cameraAccessRequired": "Camera Access Required",
+        "cameraAccessRequiredDesc": "Please allow camera access to use this feature. You may need to refresh the page after granting permissions.",
+        "analyzing": "Analyzing...",
+        "analyzeButton": "Analyze Captured Image",
+        "captureButton": "Capture Photo",
+        "retakeButton": "Retake",
+        "capturedAlt": "Captured",
+        "analysisFailed": "Analysis Failed",
+        "analysisFailedDesc": "Could not identify the product from the image."
+    },
+    "LanguageSwitcher": {
+        "english": "English",
+        "hungarian": "Magyar"
     }
 }

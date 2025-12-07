@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { analyzeAndUploadProduct } from '@/app/actions';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 import { initialState } from '@/lib/actions-types';
+import { useTranslations } from 'next-intl';
 
 type CameraCaptureProps = {
   onProductIdentified?: (result: ImageAnalysisState) => void;
@@ -17,6 +18,7 @@ type CameraCaptureProps = {
 export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations('CameraCapture');
   const [isProcessing, startTransition] = useTransition();
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -43,17 +45,16 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           setHasCameraPermission(false);
           toast({
             variant: 'destructive',
-            title: 'Camera Access Denied',
-            description:
-              'Please enable camera permissions in your browser settings.',
+            title: t('cameraAccessDenied'),
+            description: t('cameraAccessDeniedDesc'),
           });
         }
       } else {
         setHasCameraPermission(false);
         toast({
           variant: 'destructive',
-          title: 'Camera Not Supported',
-          description: 'Your browser does not support camera access.',
+          title: t('cameraNotSupported'),
+          description: t('cameraNotSupportedDesc'),
         });
       }
     };
@@ -75,8 +76,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       if (video.videoWidth === 0 || video.videoHeight === 0) {
         toast({
           variant: 'destructive',
-          title: 'Capture Failed',
-          description: 'Could not capture image. Please try again.',
+          title: t('captureFailed'),
+          description: t('captureFailedDesc'),
         });
         return;
       }
@@ -117,8 +118,8 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
       } else {
         toast({
           variant: 'destructive',
-          title: 'Analysis Failed',
-          description: result.error || 'Could not identify the product from the image.',
+          title: t('analysisFailed'),
+          description: result.error || t('analysisFailedDesc'),
         });
       }
     });
@@ -140,16 +141,15 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
     return (
       <Alert variant="destructive">
         <Terminal className="h-4 w-4" />
-        <AlertTitle>Camera Access Required</AlertTitle>
+        <AlertTitle>{t('cameraAccessRequired')}</AlertTitle>
         <AlertDescription>
-          Please allow camera access to use this feature. You may need to
-          refresh the page after granting permissions.
+          {t('cameraAccessRequiredDesc')}
         </AlertDescription>
       </Alert>
     );
   }
   
-  const buttonText = isProcessing ? 'Analyzing...' : 'Analyze Captured Image';
+  const buttonText = isProcessing ? t('analyzing') : t('analyzeButton');
 
   return (
     <div className="space-y-4">
@@ -167,19 +167,19 @@ export function CameraCapture({ onProductIdentified }: CameraCaptureProps) {
           </div>
           <Button onClick={handleCapture} className="w-full" type="button">
             <Camera className="mr-2 h-4 w-4" />
-            Capture Photo
+            {t('captureButton')}
           </Button>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="relative w-full overflow-hidden rounded-md border">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={capturedImage} alt="Captured" className="w-full" />
+            <img src={capturedImage} alt={t('capturedAlt')} className="w-full" />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={handleRetake} type="button" disabled={isProcessing}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Retake
+              {t('retakeButton')}
             </Button>
             <Button onClick={handleSubmit} disabled={isProcessing} className="w-full">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 type ProductListProps = {
   chartData: Product[];
@@ -18,10 +19,12 @@ type ProductListProps = {
 };
 
 export function ProductList({ chartData, onItemClick, highlightedProduct, loading }: ProductListProps) {
+  const t = useTranslations('ProductList');
+  
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Product Details</CardTitle>
+        <CardTitle className="font-headline">{t('title')}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading && (
@@ -33,8 +36,8 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
         )}
         {!loading && chartData.length === 0 && (
             <div className="text-center text-muted-foreground py-8">
-                <p>No products found.</p>
-                <p className="text-sm">Scan a product to get started!</p>
+                <p>{t('noProducts')}</p>
+                <p className="text-sm">{t('scanToStart')}</p>
             </div>
         )}
         <ul className="space-y-2">
@@ -68,9 +71,9 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
                 <div className="flex-1">
                   <p className="font-semibold">{item.name}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Safety: {Math.round(item.avgSafety || 0)}%</span>
+                    <span>{t('safety', { value: Math.round(item.avgSafety || 0) })}</span>
                     <span>•</span>
-                    <span>Taste: {Math.round(item.avgTaste || 0)}%</span>
+                    <span>{t('taste', { value: Math.round(item.avgTaste || 0) })}</span>
                   </div>
                 </div>
               </Link>

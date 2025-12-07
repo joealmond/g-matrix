@@ -56,18 +56,16 @@ export function DynamicHeaderButtons() {
               <Link href="/admin">{t('admin')}</Link>
             </Button>
           )}
-          <Button variant="ghost" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            {t('logout')}
+          <Button variant="ghost" size="icon" onClick={handleLogout} title={t('logout')}>
+            <LogOut className="h-4 w-4" />
           </Button>
         </>
       );
     }
     return (
-      <Button variant="outline" asChild>
+      <Button variant="outline" size="icon" asChild title={t('login')}>
         <Link href="/login">
-          <LogIn className="mr-2 h-4 w-4" />
-          {t('login')}
+          <LogIn className="h-4 w-4" />
         </Link>
       </Button>
     );

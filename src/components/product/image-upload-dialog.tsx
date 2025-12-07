@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CameraCapture } from './camera-capture';
 import { useRouter } from 'next/navigation';
 import type { ImageAnalysisState } from '@/lib/actions-types';
+import { useTranslations } from 'next-intl';
 
 type ImageUploadDialogProps = {
   children: ReactNode;
@@ -24,6 +25,7 @@ type ImageUploadDialogProps = {
 
 export function ImageUploadDialog({ children, open, onOpenChange }: ImageUploadDialogProps) {
   const router = useRouter();
+  const t = useTranslations('ImageUploadDialog');
 
   const handleProductIdentified = (analysisResult: ImageAnalysisState) => {
     // Close the dialog
@@ -42,16 +44,15 @@ export function ImageUploadDialog({ children, open, onOpenChange }: ImageUploadD
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="font-headline">Scan a Product</DialogTitle>
+          <DialogTitle className="font-headline">{t('title')}</DialogTitle>
           <DialogDescription>
-            Upload a photo or use your camera to scan a product, and we'll try
-            to identify it for you.
+            {t('description')}
           </DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="upload">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload">Upload Photo</TabsTrigger>
-            <TabsTrigger value="camera">Use Camera</TabsTrigger>
+            <TabsTrigger value="upload">{t('uploadTab')}</TabsTrigger>
+            <TabsTrigger value="camera">{t('cameraTab')}</TabsTrigger>
           </TabsList>
           <TabsContent value="upload" className="pt-4">
             <ImageUploadForm onProductIdentified={handleProductIdentified} />

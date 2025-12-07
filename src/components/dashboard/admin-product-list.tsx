@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useTranslations } from 'next-intl';
 
 type AdminProductListProps = {
   chartData: Product[];
@@ -38,6 +39,7 @@ type AdminProductListProps = {
 export function AdminProductList({ chartData, onItemClick, highlightedProduct, loading }: AdminProductListProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const t = useTranslations('AdminProductList');
 
     const handleDelete = (productId: string, productName: string) => {
         if (!firestore) return;
@@ -48,8 +50,8 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
         deleteDoc(productRef)
             .then(() => {
                 toast({
-                    title: 'Product Deleted',
-                    description: `"${productName}" has been successfully deleted.`,
+                    title: t('productDeleted'),
+                    description: t('productDeletedDesc', { productName }),
                 });
             })
             .catch(async (serverError) => {
@@ -68,7 +70,7 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Product Management</CardTitle>
+        <CardTitle className="font-headline">{t('title')}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading && (
@@ -80,8 +82,8 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
         )}
         {!loading && chartData.length === 0 && (
             <div className="text-center text-muted-foreground py-8">
-                <p>No products found.</p>
-                <p className="text-sm">Scan a product to get started!</p>
+                <p>{t('noProducts')}</p>
+                <p className="text-sm">{t('scanToStart')}</p>
             </div>
         )}
         <ul className="space-y-2">
@@ -118,9 +120,9 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
                 <div className="flex-1">
                   <p className="font-semibold">{item.name}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>Safety: {Math.round(item.avgSafety || 0)}%</span>
+                    <span>{t('safety', { value: Math.round(item.avgSafety || 0) })}</span>
                     <span>•</span>
-                    <span>Taste: {Math.round(item.avgTaste || 0)}%</span>
+                    <span>{t('taste', { value: Math.round(item.avgTaste || 0) })}</span>
                   </div>
                 </div>
               </Link>
@@ -128,21 +130,20 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
                     <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive mr-2">
                             <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
+                            <span className="sr-only">{t('delete')}</span>
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the product
-                            and all its associated votes and reports.
+                            {t('confirmDeleteDesc')}
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={() => handleDelete(item.id, item.name)} className="bg-destructive hover:bg-destructive/90">
-                            Delete
+                            {t('delete')}
                         </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>

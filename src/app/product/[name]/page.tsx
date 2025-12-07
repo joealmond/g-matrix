@@ -9,8 +9,10 @@ import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
+import { useTranslations } from 'next-intl';
 
 export default function ProductDetailsPage() {
+  const t = useTranslations('ProductPage');
   const params = useParams();
   const firestore = useFirestore();
   const [product, setProduct] = useState<Product | null>(null);
@@ -57,24 +59,24 @@ export default function ProductDetailsPage() {
   if (!product) {
     return (
       <div className="container mx-auto p-4 text-center">
-        <h1 className="text-2xl font-headline">Product not found</h1>
-        <p className="text-muted-foreground">The product "{decodedProductName}" could not be found.</p>
+        <h1 className="text-2xl font-headline">{t('productNotFound')}</h1>
+        <p className="text-muted-foreground">{t('productNotFoundDescription', { name: decodedProductName })}</p>
       </div>
     );
   }
   
   const getRatingBadge = (value: number) => {
-    if (value > 75) return <Badge variant="default" className="bg-green-500">Excellent</Badge>;
-    if (value > 50) return <Badge variant="secondary">Good</Badge>;
-    if (value > 25) return <Badge variant="outline">Fair</Badge>;
-    return <Badge variant="destructive">Poor</Badge>;
+    if (value > 75) return <Badge variant="default" className="bg-green-500">{t('excellent')}</Badge>;
+    if (value > 50) return <Badge variant="secondary">{t('good')}</Badge>;
+    if (value > 25) return <Badge variant="outline">{t('fair')}</Badge>;
+    return <Badge variant="destructive">{t('poor')}</Badge>;
   }
 
   return (
     <div className="container mx-auto p-4">
        <div className="flex items-center justify-between mb-6">
             <h1 className="font-headline text-3xl">
-              Product Details
+              {t('productDetails')}
             </h1>
         </div>
       
@@ -83,7 +85,7 @@ export default function ProductDetailsPage() {
           <Card>
               <CardHeader>
                   <CardTitle className='font-headline'>{product.name}</CardTitle>
-                  <CardDescription>Community-sourced vibe for this product.</CardDescription>
+                  <CardDescription>{t('communitySourcedVibe')}</CardDescription>
               </CardHeader>
               <CardContent>
                   {product?.imageUrl ? (
@@ -96,7 +98,7 @@ export default function ProductDetailsPage() {
                     </div>
                   ) : (
                       <div className="w-full aspect-square bg-muted rounded-md flex items-center justify-center">
-                        <span className="text-muted-foreground">No Image</span>
+                        <span className="text-muted-foreground">{t('noImage')}</span>
                       </div>
                   )}
               </CardContent>
@@ -105,18 +107,18 @@ export default function ProductDetailsPage() {
         <div>
           <Card className="h-full">
             <CardHeader>
-              <CardTitle className="font-headline">Overall Vibe</CardTitle>
-              <CardDescription>Based on {product.voteCount || 0} votes.</CardDescription>
+              <CardTitle className="font-headline">{t('overallVibe')}</CardTitle>
+              <CardDescription>{t('basedOnVotes', { count: product.voteCount || 0 })}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="flex justify-around text-center">
                   <div>
-                    <p className="text-sm text-muted-foreground">Average Safety</p>
+                    <p className="text-sm text-muted-foreground">{t('averageSafety')}</p>
                     <p className="text-3xl font-bold">{Math.round(product.avgSafety || 0)}%</p>
                     {getRatingBadge(product.avgSafety || 0)}
                   </div>
                    <div>
-                    <p className="text-sm text-muted-foreground">Average Taste</p>
+                    <p className="text-sm text-muted-foreground">{t('averageTaste')}</p>
                     <p className="text-3xl font-bold">{Math.round(product.avgTaste || 0)}%</p>
                     {getRatingBadge(product.avgTaste || 0)}
                   </div>
