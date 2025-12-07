@@ -18,7 +18,7 @@ export function DynamicHeaderButtons() {
   const router = useRouter();
   const auth = useAuth();
   const [isDialogOpen, setDialogOpen] = useState(false);
-  const { user, isUserLoading: userLoading } = useUser();
+  const { user, loading: userLoading } = useUser();
   const { isAdmin, isLoading: adminLoading } = useAdmin();
 
   const isLoading = userLoading || (user && adminLoading);

@@ -19,7 +19,7 @@ function getAdminDocRef(
 }
 
 export function useAdmin(): UseAdminResult {
-  const { user, isUserLoading: isUserLoading } = useUser();
+  const { user, loading: isUserLoading } = useUser();
   const firestore = useFirestore();
 
   const adminDocRef = useMemoFirebase(

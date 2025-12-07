@@ -5,7 +5,7 @@ import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductList } from '@/components/dashboard/product-list';
 import { ProductSearch } from '@/components/dashboard/product-search';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, limit, orderBy } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemo, useState } from 'react';
 import type { Product } from '@/lib/types';
@@ -19,10 +19,10 @@ export default function Home() {
 
   const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'products'));
+    return query(collection(firestore, 'products'), limit(100));
   }, [firestore]);
 
-  const { data: chartData, loading } = useCollection<Product>(productsCollection);
+  const { data: chartData, isLoading: loading } = useCollection<Product>(productsCollection);
 
   const filteredData = useMemo(() => {
     if (!chartData) return [];

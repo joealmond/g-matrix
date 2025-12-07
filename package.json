@@ -61,6 +61,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "firebase-tools": "^14.27.0",
     "genkit-cli": "^1.25.0",
     "postcss": "^8",

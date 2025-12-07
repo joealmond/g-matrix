@@ -1,9 +1,11 @@
 'use client';
+
+import dynamic from 'next/dynamic';
 import { AdSlot } from '@/components/dashboard/ad-slot';
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
 import { ProductSearch } from '@/components/dashboard/product-search';
 import { useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, limit, orderBy } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useMemo, useState, useEffect } from 'react';
 import type { Product } from '@/lib/types';
@@ -37,10 +39,10 @@ export default function AdminDashboardPage() {
 
   const productsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'products'));
+    return query(collection(firestore, 'products'), limit(100));
   }, [firestore]);
 
-  const { data: chartData, loading: productsLoading } =
+  const { data: chartData, isLoading: productsLoading } =
     useCollection<Product>(productsCollection);
 
   const filteredData = useMemo(() => {
@@ -86,16 +88,6 @@ export default function AdminDashboardPage() {
           </h3>
           <p className="text-sm text-muted-foreground">
             {t('accessDeniedDescription')}
-          </p>
-        </div>
-      </div>
-    );
-  }
-          <h3 className="text-2xl font-bold tracking-tight font-headline">
-            Access Denied
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            You do not have permission to view this page.
           </p>
         </div>
       </div>

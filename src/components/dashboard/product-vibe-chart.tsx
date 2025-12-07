@@ -131,8 +131,9 @@ export function ProductVibeChart() {
               </YAxis>
               
               <Label content={({ viewBox }) => {
-                  if (!viewBox || !viewBox.width || !viewBox.height) return null;
-                  const { x, y, width, height } = viewBox;
+                  const cartesianViewBox = viewBox as { x?: number; y?: number; width?: number; height?: number } | undefined;
+                  if (!cartesianViewBox || !cartesianViewBox.width || !cartesianViewBox.height) return null;
+                  const { x = 0, y = 0, width, height } = cartesianViewBox;
                   const cx = x + width / 2;
                   const cy = y + height / 2;
                   return (

@@ -4,7 +4,51 @@ import { adminDb, adminStorage } from '@/lib/firebase-admin';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import type { ImageAnalysisState } from '@/lib/actions-types';
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+async function checkRateLimit(ip: string): Promise<{ allowed: boolean; remaining: number }> {
+  if (!adminDb) {
+    // If Firestore is not available, allow the request but log a warning
+    console.warn('Rate limiting skipped: Firestore not available');
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS };
+  }
+
+  const now = Date.now();
+  const rateLimitRef = adminDb.collection('rate_limits').doc(ip.replace(/[./]/g, '_'));
+
+  try {
+    const doc = await rateLimitRef.get();
+    const data = doc.data();
+
+    if (data) {
+      const windowStart = data.windowStart as number;
+      const count = data.count as number;
+
+      // Check if we're still in the same window
+      if (now - windowStart < RATE_LIMIT_WINDOW_MS) {
+        if (count >= RATE_LIMIT_MAX_REQUESTS) {
+          return { allowed: false, remaining: 0 };
+        }
+        // Increment counter
+        await rateLimitRef.update({ count: count + 1 });
+        return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - count - 1 };
+      }
+    }
+
+    // Start a new window
+    await rateLimitRef.set({ windowStart: now, count: 1 });
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1 };
+  } catch (error) {
+    console.error('Rate limit check failed:', error);
+    // On error, allow the request but log it
+    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS };
+  }
+}
 
 const AnalysisSchema = z.object({
   productName: z.string(),
@@ -18,6 +62,17 @@ export async function analyzeAndUploadProduct(
   prevState: ImageAnalysisState,
   formData: FormData
 ): Promise<ImageAnalysisState> {
+  // --- RATE LIMITING ---
+  const headersList = await headers();
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+             headersList.get('x-real-ip') || 
+             'unknown';
+  
+  const rateLimit = await checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return { success: false, error: 'Rate limit exceeded. Please wait a minute before uploading again.' };
+  }
+
   const file = formData.get('image') as File;
   const userId = 'anonymous';
 
@@ -76,12 +131,18 @@ export async function analyzeAndUploadProduct(
     }
     
     // --- STEP 3: UPLOAD TO FIREBASE STORAGE (ALWAYS RUNS) ---
+    if (!adminStorage) {
+      return { success: false, error: 'Storage service not available' };
+    }
     const bucket = adminStorage.bucket();
     const fileName = `uploads/${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
     const fileUpload = bucket.file(fileName);
 
     await fileUpload.save(buffer, {
-      metadata: { contentType: file.type },
+      metadata: { 
+        contentType: file.type,
+        cacheControl: 'public, max-age=31536000', // Cache for 1 year
+      },
     });
 
     await fileUpload.makePublic();
