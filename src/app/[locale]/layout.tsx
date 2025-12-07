@@ -6,6 +6,12 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages, setRequestLocale} from 'next-intl/server';
+import {routing} from '@/i18n/routing';
+import { notFound } from 'next/navigation';
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({locale}));
+}
 
 export const metadata: Metadata = {
   title: 'G-Matrix: Gluten-Free Vibe Check',
@@ -21,6 +27,12 @@ export default async function RootLayout({
   params: {locale: string};
 }) {
   const {locale} = params;
+
+  // Validate that the incoming `locale` parameter is valid
+  if (!routing.locales.includes(locale as any)) {
+    notFound();
+  }
+  
   setRequestLocale(locale);
   const messages = await getMessages();
 
@@ -49,4 +61,3 @@ export default async function RootLayout({
     </html>
   );
 }
-

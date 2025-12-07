@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
 import { Skeleton } from '../ui/skeleton';
-import { LanguageSwitcher } from './language-switcher';
+import LocaleSwitcher from './LocaleSwitcher';
 import { useTranslations } from 'next-intl';
 
 export function DynamicHeaderButtons() {
@@ -95,7 +95,7 @@ export function DynamicHeaderButtons() {
       )}
 
       <div className="flex items-center gap-2">
-        <LanguageSwitcher />
+        <LocaleSwitcher />
         {renderAuthButtons()}
       </div>
     </div>
