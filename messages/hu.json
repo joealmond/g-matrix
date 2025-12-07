@@ -4,7 +4,7 @@
         "description": "Gluténmentes termékek és közösségi értékelések."
     },
     "ProductSearch": {
-        "findYourVibe": "Keresd a vibeodat",
+        "findYourVibe": "Találd meg a kedvenced",
         "searchPlaceholder": "Termékek keresése..."
     },
     "DynamicHeaderButtons": {
@@ -12,7 +12,7 @@
         "logout": "Kilépés",
         "login": "Belépés",
         "backToHome": "Vissza",
-        "scanProduct": "Szkennelés"
+        "scanProduct": "Beolvasás"
     },
     "Login": {
         "verifyingCredentials": "Hitelesítés...",
@@ -121,7 +121,7 @@
         "placeholder": "Hirdetés helye"
     },
     "ImageUploadDialog": {
-        "title": "Termék szkennelése",
+        "title": "Termék beolvasása",
         "description": "Tölts fel képet vagy használd a kamerát, és azonosítjuk a terméket.",
         "uploadTab": "Kép feltöltése",
         "cameraTab": "Kamera"
