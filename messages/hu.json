@@ -1,5 +1,16 @@
 {
     "Index": {
         "title": "Szia"
+    },
+    "ProductSearch": {
+        "findYourVibe": "Találd meg a hangulatod",
+        "searchPlaceholder": "Termékek keresése..."
+    },
+    "DynamicHeaderButtons": {
+        "admin": "Admin",
+        "logout": "Kijelentkezés",
+        "login": "Bejelentkezés",
+        "backToHome": "Vissza a főoldalra",
+        "scanProduct": "Termék szkennelése"
     }
 }

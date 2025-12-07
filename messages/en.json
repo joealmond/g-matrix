@@ -1,5 +1,16 @@
 {
     "Index": {
         "title": "hello"
+    },
+    "ProductSearch": {
+        "findYourVibe": "Find Your Vibe",
+        "searchPlaceholder": "Search products..."
+    },
+    "DynamicHeaderButtons": {
+        "admin": "Admin",
+        "logout": "Logout",
+        "login": "Login",
+        "backToHome": "Back to Home",
+        "scanProduct": "Scan Product"
     }
 }
