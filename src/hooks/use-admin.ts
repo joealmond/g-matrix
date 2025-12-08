@@ -33,7 +33,12 @@ export function useAdmin(): UseAdminResult {
 
   const { data: adminDoc, isLoading: isAdminDocLoading } = useDoc(adminDocRef);
 
-  const isLoading = isUserLoading || isAdminDocLoading;
+  // We're loading if:
+  // 1. User is still loading
+  // 2. OR we have a user but the admin doc is still loading
+  // 3. OR we have a user but no docRef yet (firestore not ready)
+  const isLoading = isUserLoading || (!!user && (isAdminDocLoading || !adminDocRef));
+  
   const isRealAdmin = !!adminDoc;
   
   // If viewing as user, hide admin status (but keep isRealAdmin for UI controls)
