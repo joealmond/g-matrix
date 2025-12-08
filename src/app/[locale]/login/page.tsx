@@ -9,11 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, Loader2, Terminal, RefreshCw } from 'lucide-react';
+import { Camera, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { analyzeAndUploadProduct } from '@/app/actions';

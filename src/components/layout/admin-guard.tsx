@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';

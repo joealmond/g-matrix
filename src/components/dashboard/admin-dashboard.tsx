@@ -1,28 +1,21 @@
-
 'use client';
-import { AdSlot } from '@/components/dashboard/ad-slot';
+
 import { MatrixChart } from '@/components/dashboard/matrix-chart';
-import { ProductList } from '@/components/dashboard/product-list';
 import { ProductSearch } from '@/components/dashboard/product-search';
-import { useCollectionOnce, useMemoFirebase } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { AdminProductList } from '@/components/dashboard/admin-product-list';
 import { useMemo, useState } from 'react';
 import type { Product } from '@/lib/types';
 
-export default function Home() {
+interface AdminDashboardProps {
+  chartData: Product[];
+  loading: boolean;
+}
+
+export function AdminDashboard({ chartData, loading }: AdminDashboardProps) {
   const [highlightedProduct, setHighlightedProduct] = useState<string | null>(
     null
   );
   const [searchTerm, setSearchTerm] = useState('');
-  const firestore = useFirestore();
-
-  const productsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'products'), limit(100));
-  }, [firestore]);
-
-  const { data: chartData, isLoading: loading } = useCollectionOnce<Product>(productsCollection);
 
   const filteredData = useMemo(() => {
     if (!chartData) return [];
@@ -48,9 +41,6 @@ export default function Home() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* <div className="lg:col-span-3">
-        <AdSlot />
-      </div> */}
       <div className="lg:col-span-2">
         <MatrixChart
           chartData={filteredData || []}
@@ -59,8 +49,11 @@ export default function Home() {
         />
       </div>
       <div className="lg:col-span-1 flex flex-col gap-6">
-         <ProductSearch searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
-         <ProductList
+        <ProductSearch
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+        />
+        <AdminProductList
           chartData={filteredData || []}
           loading={loading}
           onItemClick={handleItemClick}
