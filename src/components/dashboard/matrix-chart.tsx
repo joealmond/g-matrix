@@ -41,6 +41,16 @@ export const chartColors = [
   '#8b5cf6',
 ];
 
+// Generate a consistent color index based on product name
+function getColorForProduct(productName: string): string {
+  let hash = 0;
+  for (let i = 0; i < productName.length; i++) {
+    hash = productName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % chartColors.length;
+  return chartColors[index];
+}
+
 const chartConfig = {
   safety: {
     label: 'Safety',
@@ -249,12 +259,12 @@ export function MatrixChart({
                 />
                 <ZAxis dataKey="product" name="product" />
                 {showDots &&
-                  dataWithCoords.map((item, index) => (
+                  dataWithCoords.map((item) => (
                     <Scatter
                       key={item.product}
                       data={[item]}
                       name={item.product}
-                      fill={chartColors[index % chartColors.length]}
+                      fill={getColorForProduct(item.product)}
                       shape={<CustomDot onPointClick={onPointClick} highlightedProduct={highlightedProduct} />}
                     />
                   ))}
