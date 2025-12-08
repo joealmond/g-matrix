@@ -22,7 +22,6 @@ import {
   YAxis,
   CartesianGrid,
   Label,
-  ResponsiveContainer,
   ReferenceArea,
   ZAxis,
 } from 'recharts';
@@ -116,15 +115,14 @@ export function MatrixChart({
             config={chartConfig}
             className="w-full aspect-square sm:aspect-video h-auto"
           >
-            <ResponsiveContainer width="100%" height={400}>
-              <ScatterChart
-                margin={{
-                  top: 20,
-                  right: isMobile ? 10 : 20,
-                  bottom: 20,
-                  left: isMobile ? -20 : 0,
-                }}
-              >
+            <ScatterChart
+              margin={{
+                top: 20,
+                right: isMobile ? 10 : 20,
+                bottom: 20,
+                left: isMobile ? -20 : 0,
+              }}
+            >
                 {/* Quadrant Backgrounds */}
                 {/* Top-Right: Holy Grail (Green) */}
                 <ReferenceArea
@@ -260,8 +258,7 @@ export function MatrixChart({
                       shape={<CustomDot onPointClick={onPointClick} highlightedProduct={highlightedProduct} />}
                     />
                   ))}
-              </ScatterChart>
-            </ResponsiveContainer>
+            </ScatterChart>
           </ChartContainer>
         </div>
       </CardContent>

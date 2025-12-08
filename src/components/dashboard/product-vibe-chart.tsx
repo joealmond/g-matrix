@@ -13,7 +13,6 @@ import {
   YAxis,
   CartesianGrid,
   Label,
-  ResponsiveContainer,
   ReferenceArea,
   ScatterChart,
 } from 'recharts';
@@ -39,15 +38,14 @@ export function ProductVibeChart() {
           config={chartConfig}
           className="w-full h-full"
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart
-              margin={{
-                top: 20,
-                right: isMobile ? 10 : 20,
-                bottom: 20,
-                left: isMobile ? -20 : 0,
-              }}
-            >
+          <ScatterChart
+            margin={{
+              top: 20,
+              right: isMobile ? 10 : 20,
+              bottom: 20,
+              left: isMobile ? -20 : 0,
+            }}
+          >
               {/* Quadrant Backgrounds */}
               {/* Top-Right: Holy Grail (Green) */}
               <ReferenceArea
@@ -146,8 +144,7 @@ export function ProductVibeChart() {
                   );
                 }}
               />
-            </ScatterChart>
-          </ResponsiveContainer>
+          </ScatterChart>
         </ChartContainer>
       </div>
   );
