@@ -2,7 +2,7 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -33,9 +33,18 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  const auth = getAuth(firebaseApp);
+  
+  // Set persistence to localStorage to avoid sessionStorage issues in 
+  // storage-partitioned browsers (Safari, iOS, Chrome incognito)
+  // This fixes: "Unable to process request due to missing initial state"
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.warn('Failed to set auth persistence:', error);
+  });
+  
   return {
     firebaseApp,
-    auth: getAuth(firebaseApp),
+    auth,
     firestore: getFirestore(firebaseApp)
   };
 }
