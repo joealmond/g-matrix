@@ -95,52 +95,39 @@ export default function Home() {
         />
         
         {/* Quadrant Quick Filters */}
-        <div className="flex flex-wrap gap-2 justify-center">
+        <div className="flex gap-2 justify-center">
           <Button 
-            variant={quadrantFilter === 'holyGrail' ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
             onClick={() => handleQuadrantClick('holyGrail')}
-            className={quadrantFilter === 'holyGrail' ? 'bg-green-500 hover:bg-green-600' : ''}
+            className={`bg-green-500/30 hover:bg-green-500/50 ${quadrantFilter === 'holyGrail' ? 'ring-2 ring-green-500' : ''}`}
           >
-            <span className="w-2 h-2 rounded-full bg-green-500 mr-2" />
             {t('holyGrail')}
           </Button>
           <Button 
-            variant={quadrantFilter === 'survivorFood' ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
             onClick={() => handleQuadrantClick('survivorFood')}
-            className={quadrantFilter === 'survivorFood' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}
+            className={`bg-yellow-500/30 hover:bg-yellow-500/50 ${quadrantFilter === 'survivorFood' ? 'ring-2 ring-yellow-500' : ''}`}
           >
-            <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />
             {t('survivorFood')}
           </Button>
           <Button 
-            variant={quadrantFilter === 'russianRoulette' ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
             onClick={() => handleQuadrantClick('russianRoulette')}
-            className={quadrantFilter === 'russianRoulette' ? 'bg-red-500 hover:bg-red-600' : ''}
+            className={`bg-red-500/30 hover:bg-red-500/50 ${quadrantFilter === 'russianRoulette' ? 'ring-2 ring-red-500' : ''}`}
           >
-            <span className="w-2 h-2 rounded-full bg-red-500 mr-2" />
             {t('russianRoulette')}
           </Button>
           <Button 
-            variant={quadrantFilter === 'theBin' ? 'default' : 'outline'}
+            variant="ghost"
             size="sm"
             onClick={() => handleQuadrantClick('theBin')}
-            className={quadrantFilter === 'theBin' ? 'bg-gray-500 hover:bg-gray-600' : ''}
+            className={`bg-gray-500/30 hover:bg-gray-500/50 ${quadrantFilter === 'theBin' ? 'ring-2 ring-gray-500' : ''}`}
           >
-            <span className="w-2 h-2 rounded-full bg-gray-500 mr-2" />
             {t('theBin')}
           </Button>
-          {quadrantFilter !== 'all' && (
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={() => setQuadrantFilter('all')}
-            >
-              {t('clearFilter')}
-            </Button>
-          )}
         </div>
       </div>
       <div className="lg:col-span-1 flex flex-col gap-6">
