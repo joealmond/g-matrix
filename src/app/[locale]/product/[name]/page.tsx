@@ -119,12 +119,12 @@ export default function ProductDetailsPage() {
     fetchUserVote();
   }, [firestore, user, productId]);
 
-  // Fetch all votes when view mode changes to allVotes OR when admin needs to see voter list
+  // Fetch all votes when view mode changes to allVotes OR when admin needs to see voter list OR when impersonating
   useEffect(() => {
     const fetchAllVotes = async () => {
       if (!firestore || !productId) return;
-      // Fetch votes when viewing all votes OR when admin needs the list
-      if (viewMode !== 'allVotes' && !isAdmin) return;
+      // Fetch votes when viewing all votes OR when admin needs the list OR when impersonating
+      if (viewMode !== 'allVotes' && !isRealAdmin && !impersonatedUserId) return;
       
       const votesRef = collection(firestore, 'products', productId, 'votes');
       try {
@@ -137,7 +137,7 @@ export default function ProductDetailsPage() {
     };
 
     fetchAllVotes();
-  }, [firestore, productId, viewMode, isAdmin]);
+  }, [firestore, productId, viewMode, isRealAdmin, impersonatedUserId]);
 
   const handleVibeChange = useCallback((newVibe: { safety: number; taste: number }) => {
     setCustomVibe(newVibe);
@@ -313,6 +313,13 @@ export default function ProductDetailsPage() {
 
   const isLoggedIn = !!user && !userLoading;
   const isRegistered = user && !user.isAnonymous;
+  
+  // Get the effective vote to display - either impersonated user's or real user's
+  const impersonatedVote = impersonatedUserId 
+    ? allVotes.find(v => v.userId === impersonatedUserId) 
+    : null;
+  const effectiveVote = impersonatedUserId ? impersonatedVote : userVote;
+  const isImpersonatingOtherUser = !!impersonatedUserId && impersonatedUserId !== user?.uid;
 
   return (
     <div className="container mx-auto p-4">
@@ -397,11 +404,25 @@ export default function ProductDetailsPage() {
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="average">{t('average')}</TabsTrigger>
-                  {isLoggedIn && <TabsTrigger value="myVote">{t('myVote')}</TabsTrigger>}
-                  {!isLoggedIn && <TabsTrigger value="myVote" disabled>{t('myVote')}</TabsTrigger>}
+                  {(isLoggedIn || impersonatedUserId) && (
+                    <TabsTrigger value="myVote">
+                      {impersonatedUserId ? t('theirVote') : t('myVote')}
+                    </TabsTrigger>
+                  )}
+                  {!isLoggedIn && !impersonatedUserId && <TabsTrigger value="myVote" disabled>{t('myVote')}</TabsTrigger>}
                   <TabsTrigger value="allVotes">{t('allVotes')}</TabsTrigger>
                 </TabsList>
               </Tabs>
+              
+              {/* Impersonation indicator */}
+              {impersonatedUserId && (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/30">
+                  <Eye className="h-4 w-4 text-yellow-500" />
+                  <span className="text-sm text-yellow-500">
+                    {t('viewingAs')} <code className="font-mono">{impersonatedUserId.slice(0, 8)}...</code>
+                  </span>
+                </div>
+              )}
 
               {/* Chart with dots */}
               <div className="relative h-[350px]">
@@ -419,20 +440,24 @@ export default function ProductDetailsPage() {
                   />
                 )}
 
-                {/* User's vote dot */}
-                {viewMode === 'myVote' && userVote && (
+                {/* User's vote dot (or impersonated user's vote) */}
+                {viewMode === 'myVote' && effectiveVote && (
                   <div
-                    className="absolute w-5 h-5 rounded-full border-2 border-white shadow-lg pointer-events-none"
+                    className={`absolute w-5 h-5 rounded-full border-2 shadow-lg pointer-events-none ${
+                      impersonatedUserId ? 'border-yellow-500' : 'border-white'
+                    }`}
                     style={{
-                      left: `calc(${userVote.taste}% - 10px)`,
-                      top: `calc(${100 - userVote.safety}% - 10px)`,
+                      left: `calc(${effectiveVote.taste}% - 10px)`,
+                      top: `calc(${100 - effectiveVote.safety}% - 10px)`,
                       backgroundColor: getColorForProduct(product.name),
                     }}
                   />
                 )}
-                {viewMode === 'myVote' && !userVote && (
+                {viewMode === 'myVote' && !effectiveVote && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-                    <p className="text-muted-foreground">{t('noVoteYet')}</p>
+                    <p className="text-muted-foreground">
+                      {impersonatedUserId ? t('userHasNotVoted') : t('noVoteYet')}
+                    </p>
                   </div>
                 )}
 
@@ -459,8 +484,8 @@ export default function ProductDetailsPage() {
           </Card>
         </div>
 
-        {/* Voting Section - Only for logged in users */}
-        {isLoggedIn && (
+        {/* Voting Section - Only for logged in users, hidden when impersonating another user */}
+        {isLoggedIn && !isImpersonatingOtherUser && (
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">{t('addYourVote')}</CardTitle>
