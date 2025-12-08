@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -10,10 +11,11 @@ import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
 import { Button } from '../ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, RefreshCw } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { recalculateProductAveragesWithTimeDecay } from '@/app/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +42,7 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
     const firestore = useFirestore();
     const { toast } = useToast();
     const t = useTranslations('AdminProductList');
+    const [recalculatingId, setRecalculatingId] = useState<string | null>(null);
 
     const handleDelete = (productId: string, productName: string) => {
         if (!firestore) return;
@@ -65,6 +68,33 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
                 // Do not use console.error or show a toast here.
                 errorEmitter.emit('permission-error', permissionError);
             });
+    };
+
+    const handleRecalculate = async (productId: string, productName: string) => {
+        setRecalculatingId(productId);
+        try {
+            const result = await recalculateProductAveragesWithTimeDecay(productId);
+            if (result.success) {
+                toast({
+                    title: t('recalculateSuccess') || 'Recalculated',
+                    description: t('recalculateSuccessDesc', { productName }) || `Stats recalculated for ${productName}`,
+                });
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: t('recalculateFailed') || 'Recalculate failed',
+                    description: result.error,
+                });
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: t('recalculateFailed') || 'Recalculate failed',
+                description: error.message,
+            });
+        } finally {
+            setRecalculatingId(null);
+        }
     };
 
   return (
@@ -126,6 +156,16 @@ export function AdminProductList({ chartData, onItemClick, highlightedProduct, l
                   </div>
                 </div>
               </Link>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRecalculate(item.id, item.name)}
+                    disabled={recalculatingId === item.id}
+                >
+                    <RefreshCw className={cn("h-4 w-4", recalculatingId === item.id && "animate-spin")} />
+                    <span className="sr-only">{t('recalculate') || 'Recalculate'}</span>
+                </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive mr-2">
