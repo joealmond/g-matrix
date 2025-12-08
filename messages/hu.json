@@ -1,7 +1,13 @@
 {
     "Metadata": {
         "title": "G-Matrix: Gluténmentes Vibe Check",
-        "description": "Gluténmentes termékek és közösségi értékelések."
+        "description": "Találj gluténmentes termékeket és nézd meg a közösségi értékeléseiket."
+    },
+    "AdminToolbar": {
+        "adminMode": "Admin",
+        "viewAsUser": "Felhasználóként",
+        "viewingAsUser": "Felhasználó nézet",
+        "backToAdmin": "Vissza adminba"
     },
     "Home": {
         "holyGrail": "Szent Grál",

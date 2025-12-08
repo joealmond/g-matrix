@@ -8,7 +8,8 @@ import { Loader2 } from 'lucide-react';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: isUserLoading } = useUser();
-  const { isAdmin, isLoading: isAdminLoading } = useAdmin();
+  // Use isRealAdmin to allow access even when viewing as user
+  const { isRealAdmin, isLoading: isAdminLoading } = useAdmin();
   const router = useRouter();
   const isLoading = isUserLoading || isAdminLoading;
 
@@ -16,11 +17,11 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     if (!isLoading) {
       if (!user) {
         router.push('/login');
-      } else if (!isAdmin) {
+      } else if (!isRealAdmin) {
         router.push('/');
       }
     }
-  }, [user, isAdmin, isLoading, router]);
+  }, [user, isRealAdmin, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -30,7 +31,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user || !isAdmin) {
+  if (!user || !isRealAdmin) {
     return null;
   }
 

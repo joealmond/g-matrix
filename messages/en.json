@@ -3,6 +3,12 @@
         "title": "G-Matrix: Gluten-Free Vibe Check",
         "description": "Find gluten-free products and check their vibe with community ratings."
     },
+    "AdminToolbar": {
+        "adminMode": "Admin",
+        "viewAsUser": "View as User",
+        "viewingAsUser": "Viewing as User",
+        "backToAdmin": "Back to Admin"
+    },
     "Home": {
         "holyGrail": "Holy Grail",
         "survivorFood": "Survivor Food",

@@ -3,6 +3,7 @@ import '../globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
+import { ImpersonateProvider } from '@/hooks/use-impersonate';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages, setRequestLocale, getTranslations} from 'next-intl/server';
 import {routing} from '@/i18n/routing';
@@ -56,7 +57,9 @@ export default async function RootLayout({
       <body className="font-body antialiased">
         <NextIntlClientProvider messages={messages}>
           <FirebaseClientProvider>
-            <AppLayout>{children}</AppLayout>
+            <ImpersonateProvider>
+              <AppLayout>{children}</AppLayout>
+            </ImpersonateProvider>
           </FirebaseClientProvider>
           <Toaster />
         </NextIntlClientProvider>

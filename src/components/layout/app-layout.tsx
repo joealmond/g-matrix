@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
 import { useEffect, useState } from 'react';
 import { DynamicHeaderButtons } from './dynamic-header-buttons';
+import { AdminToolbar } from './admin-toolbar';
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
@@ -65,5 +66,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppLayoutContent>{children}</AppLayoutContent>
+  return (
+    <>
+      <AppLayoutContent>{children}</AppLayoutContent>
+      <AdminToolbar />
+    </>
+  );
 }
