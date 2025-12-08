@@ -20,6 +20,11 @@ export interface UseCollectionOnceResult<T> {
   refetch: () => void;
 }
 
+// Internal type to access query path
+interface InternalQuery {
+  _query: { path: { canonicalString: () => string } };
+}
+
 export function useCollectionOnce<T = any>(
   targetRefOrQuery: CollectionReference<DocumentData> | Query<DocumentData> | null | undefined
 ): UseCollectionOnceResult<T> {
@@ -53,7 +58,15 @@ export function useCollectionOnce<T = any>(
         setIsLoading(false);
         
         if (err.code === 'permission-denied') {
-            errorEmitter.emit('error', new FirestorePermissionError('Permission denied'));
+          const path: string =
+            targetRefOrQuery.type === 'collection'
+              ? (targetRefOrQuery as CollectionReference).path
+              : (targetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
+
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            operation: 'list',
+            path,
+          }));
         }
       });
   }, [targetRefOrQuery, trigger]);
