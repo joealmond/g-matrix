@@ -177,7 +177,7 @@ export async function analyzeAndUploadProduct(
 }
 
 // --- HELPER: Generate product ID from name ---
-export function generateProductId(name: string): string {
+function generateProductId(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
