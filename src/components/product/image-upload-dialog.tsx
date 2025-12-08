@@ -10,8 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { ImageUploadForm } from './image-upload-form';
 import type { ReactNode } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CameraCapture } from './camera-capture';
 import { useRouter } from 'next/navigation';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 import { useTranslations } from 'next-intl';
@@ -49,18 +47,7 @@ export function ImageUploadDialog({ children, open, onOpenChange }: ImageUploadD
             {t('description')}
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="upload">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="upload">{t('uploadTab')}</TabsTrigger>
-            <TabsTrigger value="camera">{t('cameraTab')}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="upload" className="pt-4">
-            <ImageUploadForm onProductIdentified={handleProductIdentified} />
-          </TabsContent>
-          <TabsContent value="camera" className="pt-4">
-            <CameraCapture onProductIdentified={handleProductIdentified} />
-          </TabsContent>
-        </Tabs>
+        <ImageUploadForm onProductIdentified={handleProductIdentified} />
       </DialogContent>
     </Dialog>
   );

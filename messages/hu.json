@@ -122,9 +122,7 @@
     },
     "ImageUploadDialog": {
         "title": "Termék beolvasása",
-        "description": "Tölts fel képet vagy használd a kamerát, és azonosítjuk a terméket.",
-        "uploadTab": "Kép feltöltése",
-        "cameraTab": "Kamera"
+        "description": "Készíts fotót vagy tölts fel egy képet a termékről, és azonosítjuk."
     },
     "ImageUploadForm": {
         "photoLabel": "Termékkép",
@@ -139,23 +137,6 @@
         "fileTooLargeDesc": "Kérlek tölts fel 5MB-nál kisebb képet.",
         "imageTooSmall": "Túl kicsi kép",
         "imageTooSmallDesc": "Kérlek tölts fel legalább 200x200 pixeles képet."
-    },
-    "CameraCapture": {
-        "cameraAccessDenied": "Kamera hozzáférés megtagadva",
-        "cameraAccessDeniedDesc": "Engedélyezd a kamerát a böngésző beállításaiban.",
-        "cameraNotSupported": "Kamera nem támogatott",
-        "cameraNotSupportedDesc": "A böngésződ nem támogatja a kamerát.",
-        "captureFailed": "Fotózás sikertelen",
-        "captureFailedDesc": "Nem sikerült a kép. Próbáld újra.",
-        "cameraAccessRequired": "Kamera hozzáférés szükséges",
-        "cameraAccessRequiredDesc": "Engedélyezd a kamerát. Lehet, hogy frissítened kell az oldalt.",
-        "analyzing": "Elemzés...",
-        "analyzeButton": "Kép elemzése",
-        "captureButton": "Fotózás",
-        "retakeButton": "Újra",
-        "capturedAlt": "Elkészült",
-        "analysisFailed": "Elemzés sikertelen",
-        "analysisFailedDesc": "Nem sikerült azonosítani a terméket."
     },
     "LanguageSwitcher": {
         "english": "English",

@@ -217,6 +217,7 @@ export function ImageUploadForm({ onProductIdentified }: ImageUploadFormProps) {
             name="image"
             type="file"
             accept="image/*"
+            capture="environment"
             onChange={handleFileChange}
             ref={fileInputRef}
             className="sr-only"

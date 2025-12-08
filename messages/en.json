@@ -122,9 +122,7 @@
     },
     "ImageUploadDialog": {
         "title": "Scan a Product",
-        "description": "Upload a photo or use your camera to scan a product, and we'll try to identify it for you.",
-        "uploadTab": "Upload Photo",
-        "cameraTab": "Use Camera"
+        "description": "Take a photo or upload an image of a product, and we'll try to identify it for you."
     },
     "ImageUploadForm": {
         "photoLabel": "Product Photo",
@@ -139,23 +137,6 @@
         "fileTooLargeDesc": "Please upload an image smaller than 5MB.",
         "imageTooSmall": "Image Too Small",
         "imageTooSmallDesc": "Please upload an image at least 200x200 pixels."
-    },
-    "CameraCapture": {
-        "cameraAccessDenied": "Camera Access Denied",
-        "cameraAccessDeniedDesc": "Please enable camera permissions in your browser settings.",
-        "cameraNotSupported": "Camera Not Supported",
-        "cameraNotSupportedDesc": "Your browser does not support camera access.",
-        "captureFailed": "Capture Failed",
-        "captureFailedDesc": "Could not capture image. Please try again.",
-        "cameraAccessRequired": "Camera Access Required",
-        "cameraAccessRequiredDesc": "Please allow camera access to use this feature. You may need to refresh the page after granting permissions.",
-        "analyzing": "Analyzing...",
-        "analyzeButton": "Analyze Captured Image",
-        "captureButton": "Capture Photo",
-        "retakeButton": "Retake",
-        "capturedAlt": "Captured",
-        "analysisFailed": "Analysis Failed",
-        "analysisFailedDesc": "Could not identify the product from the image."
     },
     "LanguageSwitcher": {
         "english": "English",
