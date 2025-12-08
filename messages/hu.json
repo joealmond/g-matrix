@@ -63,6 +63,7 @@
         "average": "Átlag",
         "myVote": "Szavazatom",
         "allVotes": "Összes",
+        "dragToVote": "Húzd a pontot vagy használd a csúszkákat",
         "noVoteYet": "Még nem szavaztál",
         "userHasNotVoted": "Ez a felhasználó még nem szavazott",
         "theirVote": "Az ő szavazata",

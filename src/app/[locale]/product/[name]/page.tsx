@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
@@ -66,6 +66,9 @@ export default function ProductDetailsPage() {
   // Admin state
   const [highlightedVoteId, setHighlightedVoteId] = useState<string | null>(null);
   const [deletingVoteId, setDeletingVoteId] = useState<string | null>(null);
+  
+  // Ref for scrolling to chart
+  const chartCardRef = useRef<HTMLDivElement>(null);
 
   const decodedProductName = decodeURIComponent(params.name as string);
   const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -380,7 +383,7 @@ export default function ProductDetailsPage() {
           </Card>
 
           {/* Vibe Chart Card with View Toggle */}
-          <Card className="h-full">
+          <Card className="h-full" ref={chartCardRef}>
             <CardHeader>
               <CardTitle className="font-headline">{t('overallVibe')}</CardTitle>
               <CardDescription>{t('basedOnVotes', { count: product.voteCount || 0 })}</CardDescription>
@@ -453,7 +456,7 @@ export default function ProductDetailsPage() {
                     }}
                   />
                 )}
-                {viewMode === 'myVote' && !effectiveVote && (
+                {viewMode === 'myVote' && !effectiveVote && !isLoggedIn && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/50">
                     <p className="text-muted-foreground">
                       {impersonatedUserId ? t('userHasNotVoted') : t('noVoteYet')}
@@ -479,102 +482,89 @@ export default function ProductDetailsPage() {
                     title={vote.isRegistered ? t('verifiedUser') : t('anonymousUser')}
                   />
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Voting Section - Only for logged in users, hidden when impersonating another user */}
-        {isLoggedIn && !isImpersonatingOtherUser && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">{t('addYourVote')}</CardTitle>
-              <CardDescription>
-                {hasVoted ? t('updateYourVote') : t('shareYourOpinion')}
-                {isRegistered && <Badge variant="secondary" className="ml-2">{t('verifiedVote')}</Badge>}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Agree button */}
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <Button 
-                  onClick={handleAgree} 
-                  disabled={isSubmitting}
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ThumbsUp className="mr-2 h-4 w-4" />
-                  )}
-                  {t('agreeWithCommunity')} (+1)
-                </Button>
-                <span className="text-muted-foreground">{t('or')}</span>
-              </div>
-
-              <Separator />
-
-              {/* Custom vote with draggable dot */}
-              <div className="space-y-4">
-                <p className="font-semibold">{t('customVote')}</p>
                 
-                <div className="relative h-[300px] border rounded-lg overflow-hidden">
-                  <ProductVibeChart />
+                {/* Draggable dot for voting - only when logged in and in myVote mode and not impersonating */}
+                {isLoggedIn && viewMode === 'myVote' && !isImpersonatingOtherUser && (
                   <DraggableDot 
                     safety={customVibe.safety} 
                     taste={customVibe.taste} 
                     onVibeChange={handleVibeChange}
                   />
-                </div>
-
-                {/* Sliders */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{t('safety')}: {customVibe.safety}%</Label>
-                    <Slider
-                      value={[customVibe.safety]}
-                      onValueChange={(v) => handleSliderChange('safety', v)}
-                      max={100}
-                      step={1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('taste')}: {customVibe.taste}%</Label>
-                    <Slider
-                      value={[customVibe.taste]}
-                      onValueChange={(v) => handleSliderChange('taste', v)}
-                      max={100}
-                      step={1}
-                    />
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={handleSubmitCustom} 
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                  )}
-                  {hasVoted ? t('confirmUpdate') : t('confirmVote')}
-                </Button>
+                )}
               </div>
+              
+              {/* Voting controls - inline, only when logged in and in myVote mode */}
+              {isLoggedIn && viewMode === 'myVote' && !isImpersonatingOtherUser && (
+                <div className="space-y-4 pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{t('dragToVote')}</span>
+                    {isRegistered && <Badge variant="secondary" className="text-xs">{t('verifiedVote')}</Badge>}
+                  </div>
+                  
+                  {/* Sliders */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-sm">{t('safety')}: {customVibe.safety}%</Label>
+                      <Slider
+                        value={[customVibe.safety]}
+                        onValueChange={(v) => handleSliderChange('safety', v)}
+                        max={100}
+                        step={1}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm">{t('taste')}: {customVibe.taste}%</Label>
+                      <Slider
+                        value={[customVibe.taste]}
+                        onValueChange={(v) => handleSliderChange('taste', v)}
+                        max={100}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Vote buttons */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button 
+                      onClick={handleAgree} 
+                      disabled={isSubmitting}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <ThumbsUp className="mr-2 h-4 w-4" />
+                      )}
+                      {t('agreeWithCommunity')}
+                    </Button>
+                    <Button 
+                      onClick={handleSubmitCustom} 
+                      disabled={isSubmitting}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                      )}
+                      {hasVoted ? t('confirmUpdate') : t('confirmVote')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Sign in prompt when viewing myVote but not logged in */}
+              {!isLoggedIn && viewMode === 'myVote' && !impersonatedUserId && (
+                <div className="text-center p-4 border-t">
+                  <p className="text-muted-foreground text-sm">{t('signInToVote')}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
-        )}
-
-        {/* Not logged in prompt */}
-        {!isLoggedIn && !userLoading && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-muted-foreground">{t('signInToVote')}</p>
-            </CardContent>
-          </Card>
-        )}
+        </div>
 
         {/* Product Details Placeholders */}
         <div className="grid gap-8 md:grid-cols-2">
@@ -662,6 +652,10 @@ export default function ProductDetailsPage() {
                       onClick={() => {
                         setHighlightedVoteId(prev => prev === vote.userId ? null : vote.userId);
                         setViewMode('allVotes');
+                        // Scroll to chart
+                        setTimeout(() => {
+                          chartCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
                       }}
                     >
                       <div className="flex items-center gap-3">

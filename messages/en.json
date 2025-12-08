@@ -63,6 +63,7 @@
         "average": "Average",
         "myVote": "My Vote",
         "allVotes": "All Votes",
+        "dragToVote": "Drag the dot or use sliders to set your vote",
         "noVoteYet": "You haven't voted yet",
         "userHasNotVoted": "This user hasn't voted yet",
         "theirVote": "Their Vote",
