@@ -5,11 +5,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { Users, ShieldCheck } from 'lucide-react';
 
 type ProductListProps = {
   chartData: Product[];
@@ -68,12 +70,25 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
                     </div>
                   )}
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold">{item.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold truncate">{item.name}</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{t('safety', { value: Math.round(item.avgSafety || 0) })}</span>
                     <span>•</span>
                     <span>{t('taste', { value: Math.round(item.avgTaste || 0) })}</span>
+                  </div>
+                  {/* Vote counts */}
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs px-1.5 py-0">
+                      <Users className="h-3 w-3 mr-1" />
+                      {item.voteCount || 0}
+                    </Badge>
+                    {(item.registeredVoteCount || 0) > 0 && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        {item.registeredVoteCount}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </Link>

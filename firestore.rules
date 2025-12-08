@@ -7,6 +7,7 @@ service cloud.firestore {
     }
 
     // Public Products: Everyone can READ, but only admins can WRITE/DELETE.
+    // Product updates for vote aggregation are handled via server-side actions
     match /products/{productId} {
       allow read: if true; 
       allow write: if isAdmin();
@@ -14,10 +15,12 @@ service cloud.firestore {
 
     // User Votes: Logged-in (including anonymous) users can create votes.
     // They can only update or delete their own vote.
+    // Admins can read all votes and delete any vote (for moderation).
     match /products/{productId}/votes/{userId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if request.auth.uid == userId || isAdmin();
     }
 
     // User Profile: Users can only manage their own profile.

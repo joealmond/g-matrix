@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useEffect, useState, useRef, useTransition, useCallback } from 'react';
 import { VotingPanel } from '@/components/dashboard/voting-panel';
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { Product, Vote } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FineTunePanel } from '@/components/dashboard/fine-tune-panel';
@@ -15,12 +15,14 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 import { useTranslations } from 'next-intl';
+import { checkProductExists } from '@/app/actions';
 
 export default function VibeCheckPage() {
   const t = useTranslations('VibeCheck');
   const params = useParams();
   const router = useRouter();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isPending, startTransition] = useTransition();
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -104,13 +106,37 @@ export default function VibeCheckPage() {
       return;
     }
     
+    // Check for duplicate product
+    const { exists, productId } = await checkProductExists(trimmedName);
+    
+    if (exists && productId) {
+      // Product already exists
+      if (user && !user.isAnonymous) {
+        // Registered user: redirect to product page to vote
+        toast({
+          title: t('productExistsTitle'),
+          description: t('productExistsRedirect'),
+        });
+        router.push(`/product/${encodeURIComponent(trimmedName)}`);
+        return;
+      } else {
+        // Anonymous user: show error, cannot vote on existing product
+        toast({
+          variant: 'destructive',
+          title: t('productExistsTitle'),
+          description: t('productExistsSignIn'),
+        });
+        return;
+      }
+    }
+    
     const updatedAnalysis = { ...analysisResult, productName: trimmedName };
     sessionStorage.setItem('identifiedProduct', JSON.stringify(updatedAnalysis));
 
     startTransition(() => {
       router.replace(`/vibe-check/${encodeURIComponent(trimmedName)}`, { scroll: false });
     });
-  }, [analysisResult, manualProductName, router]);
+  }, [analysisResult, manualProductName, router, user, t]);
 
   const handleVibeSubmitted = useCallback(async (vote: Vote) => {
     setLatestVote(vote);

@@ -2,13 +2,14 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, LogIn, LogOut } from 'lucide-react';
+import { ArrowLeft, Upload, LogIn, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageUploadDialog } from '@/components/product/image-upload-dialog';
 import { useState } from 'react';
 import { useUser, useAuth } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
 import { Skeleton } from '../ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import LocaleSwitcher from './LocaleSwitcher';
 import { useTranslations } from 'next-intl';
 
@@ -49,6 +50,7 @@ export function DynamicHeaderButtons() {
 
   const renderAuthButtons = () => {
     if (user) {
+      const isAnonymous = user.isAnonymous;
       return (
         <>
           {isAdmin && !isAdminPage && (
@@ -56,6 +58,15 @@ export function DynamicHeaderButtons() {
               <Link href="/admin">{t('admin')}</Link>
             </Button>
           )}
+          {/* User avatar - show photo for Google users, generic icon for anonymous */}
+          <Avatar className="h-8 w-8">
+            {!isAnonymous && user.photoURL ? (
+              <AvatarImage src={user.photoURL} alt="User" />
+            ) : null}
+            <AvatarFallback className="bg-muted">
+              <User className="h-4 w-4 text-muted-foreground" />
+            </AvatarFallback>
+          </Avatar>
           <Button variant="ghost" size="icon" onClick={handleLogout} title={t('logout')}>
             <LogOut className="h-4 w-4" />
           </Button>
