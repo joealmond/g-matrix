@@ -4,12 +4,12 @@ import { useAdmin } from '@/hooks/use-admin';
 import { useImpersonate } from '@/hooks/use-impersonate';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, EyeOff, Shield } from 'lucide-react';
+import { Eye, EyeOff, Shield, User } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export function AdminToolbar() {
   const { isRealAdmin } = useAdmin();
-  const { isViewingAsUser, toggleViewAsUser, impersonatedUserId } = useImpersonate();
+  const { isViewingAsUser, toggleViewAsUser, stopViewingAsUser, impersonatedUserId } = useImpersonate();
   const t = useTranslations('AdminToolbar');
 
   // Only show for real admins
@@ -24,14 +24,15 @@ export function AdminToolbar() {
             {t('viewingAsUser')}
           </Badge>
           {impersonatedUserId && (
-            <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+            <Badge variant="outline" className="text-xs font-mono">
+              <User className="h-3 w-3 mr-1" />
               {impersonatedUserId.slice(0, 8)}...
-            </span>
+            </Badge>
           )}
           <Button
             size="sm"
             variant="outline"
-            onClick={toggleViewAsUser}
+            onClick={stopViewingAsUser}
             className="text-xs"
           >
             <Shield className="h-3 w-3 mr-1" />

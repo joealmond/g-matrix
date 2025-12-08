@@ -20,8 +20,9 @@ import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
 import { useTranslations } from 'next-intl';
 import { useToast } from '@/hooks/use-toast';
+import { useImpersonate } from '@/hooks/use-impersonate';
 import { submitVote, deleteVote } from '@/app/actions';
-import { ThumbsUp, MapPin, DollarSign, Loader2, CheckCircle, Trash2, Users, ShieldCheck, Clock } from 'lucide-react';
+import { ThumbsUp, MapPin, DollarSign, Loader2, CheckCircle, Trash2, Users, ShieldCheck, Clock, Eye } from 'lucide-react';
 
 // Helper to format relative time (e.g., "2 hours ago", "3 months ago")
 function getRelativeTimeString(date: Date): string {
@@ -47,8 +48,9 @@ export default function ProductDetailsPage() {
   const params = useParams();
   const firestore = useFirestore();
   const { user, loading: userLoading } = useUser();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, isRealAdmin } = useAdmin();
   const { toast } = useToast();
+  const { startViewingAsUser, impersonatedUserId } = useImpersonate();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -606,7 +608,7 @@ export default function ProductDetailsPage() {
         </div>
 
         {/* Admin Voter List */}
-        {isAdmin && allVotes.length > 0 && (
+        {isRealAdmin && allVotes.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">
@@ -624,13 +626,14 @@ export default function ProductDetailsPage() {
                     // Calculate vote age for display
                     const voteDate = (vote.votedAt as any)?.toDate?.() || (vote.createdAt as any)?.toDate?.();
                     const voteAge = voteDate ? getRelativeTimeString(voteDate) : null;
+                    const isImpersonating = impersonatedUserId === vote.userId;
                     
                     return (
                     <div 
                       key={vote.userId}
                       className={`flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer ${
                         highlightedVoteId === vote.userId ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
-                      }`}
+                      } ${isImpersonating ? 'ring-2 ring-yellow-500' : ''}`}
                       onClick={() => {
                         setHighlightedVoteId(prev => prev === vote.userId ? null : vote.userId);
                         setViewMode('allVotes');
@@ -653,6 +656,12 @@ export default function ProductDetailsPage() {
                             {voteAge && (
                               <span className="text-xs text-muted-foreground">{voteAge}</span>
                             )}
+                            {isImpersonating && (
+                              <Badge variant="secondary" className="text-xs bg-yellow-500/20 text-yellow-500 border-yellow-500/50">
+                                <Eye className="h-3 w-3 mr-1" />
+                                {t('impersonating')}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex gap-4 text-sm mt-1">
                             <span>{t('safety')}: <strong>{vote.safety}%</strong></span>
@@ -660,22 +669,36 @@ export default function ProductDetailsPage() {
                           </div>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteVote(vote.userId);
-                        }}
-                        disabled={deletingVoteId === vote.userId}
-                      >
-                        {deletingVoteId === vote.userId ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`hover:bg-yellow-500/10 ${isImpersonating ? 'text-yellow-500' : 'text-muted-foreground hover:text-yellow-500'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startViewingAsUser(vote.userId);
+                          }}
+                          title={t('viewAsThisUser')}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteVote(vote.userId);
+                          }}
+                          disabled={deletingVoteId === vote.userId}
+                        >
+                          {deletingVoteId === vote.userId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   )})}
                 </div>

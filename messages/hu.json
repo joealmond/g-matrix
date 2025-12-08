@@ -95,6 +95,8 @@
         "voterList": "Szavazók (Admin)",
         "voterListDescription": "{count} felhasználó szavazott erre a termékre.",
         "anonymous": "Anonim",
+        "impersonating": "Megtekintés",
+        "viewAsThisUser": "Alkalmazás megtekintése ennek a felhasználónak a szemszögéből",
         "voteDeleted": "Szavazat törölve",
         "voteDeletedDescription": "A szavazat eltávolítva.",
         "deleteVoteFailed": "Törlés sikertelen"

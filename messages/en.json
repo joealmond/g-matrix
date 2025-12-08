@@ -95,6 +95,8 @@
         "voterList": "Voter List (Admin)",
         "voterListDescription": "{count} users have voted on this product.",
         "anonymous": "Anonymous",
+        "impersonating": "Viewing",
+        "viewAsThisUser": "View app as this user",
         "voteDeleted": "Vote Deleted",
         "voteDeletedDescription": "The vote has been removed.",
         "deleteVoteFailed": "Delete Failed"
