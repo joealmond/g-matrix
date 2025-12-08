@@ -42,7 +42,7 @@ export const chartColors = [
 ];
 
 // Generate a consistent color index based on product name
-function getColorForProduct(productName: string): string {
+export function getColorForProduct(productName: string): string {
   let hash = 0;
   for (let i = 0; i < productName.length; i++) {
     hash = productName.charCodeAt(i) + ((hash << 5) - hash);

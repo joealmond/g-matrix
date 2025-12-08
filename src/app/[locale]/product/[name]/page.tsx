@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ProductVibeChart } from '@/components/dashboard/product-vibe-chart';
+import { getColorForProduct } from '@/components/dashboard/matrix-chart';
 import { DraggableDot } from '@/components/dashboard/draggable-dot';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -407,10 +408,11 @@ export default function ProductDetailsPage() {
                 {/* Average dot */}
                 {viewMode === 'average' && product.avgTaste !== undefined && product.avgSafety !== undefined && (
                   <div
-                    className="absolute w-4 h-4 rounded-full bg-primary border-2 border-primary-foreground shadow-lg pointer-events-none"
+                    className="absolute w-4 h-4 rounded-full border-2 border-primary-foreground shadow-lg pointer-events-none"
                     style={{
                       left: `calc(${product.avgTaste}% - 8px)`,
                       top: `calc(${100 - product.avgSafety}% - 8px)`,
+                      backgroundColor: getColorForProduct(product.name),
                     }}
                   />
                 )}
@@ -418,10 +420,11 @@ export default function ProductDetailsPage() {
                 {/* User's vote dot */}
                 {viewMode === 'myVote' && userVote && (
                   <div
-                    className="absolute w-5 h-5 rounded-full bg-green-500 border-2 border-white shadow-lg pointer-events-none"
+                    className="absolute w-5 h-5 rounded-full border-2 border-white shadow-lg pointer-events-none"
                     style={{
                       left: `calc(${userVote.taste}% - 10px)`,
                       top: `calc(${100 - userVote.safety}% - 10px)`,
+                      backgroundColor: getColorForProduct(product.name),
                     }}
                   />
                 )}
@@ -439,13 +442,12 @@ export default function ProductDetailsPage() {
                       highlightedVoteId === vote.userId 
                         ? 'w-5 h-5 ring-2 ring-primary ring-offset-2 z-10' 
                         : 'w-3 h-3'
-                    } ${
-                      vote.isRegistered ? 'bg-green-500' : 'bg-muted-foreground'
                     }`}
                     style={{
                       left: `calc(${vote.taste}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
                       top: `calc(${100 - vote.safety}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
                       opacity: highlightedVoteId && highlightedVoteId !== vote.userId ? 0.4 : 0.9,
+                      backgroundColor: getColorForProduct(product.name),
                     }}
                     title={vote.isRegistered ? t('verifiedUser') : t('anonymousUser')}
                   />
