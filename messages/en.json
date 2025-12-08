@@ -134,7 +134,7 @@
         "russianRoulette": "Russian Roulette"
     },
     "ProductList": {
-        "title": "Product Details",
+        "title": "Products",
         "noProducts": "No products found.",
         "scanToStart": "Scan a product to get started!",
         "safety": "Safety: {value}%",

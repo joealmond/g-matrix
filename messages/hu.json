@@ -134,7 +134,7 @@
         "russianRoulette": "Orosz rulett"
     },
     "ProductList": {
-        "title": "Termék részletei",
+        "title": "Termékek",
         "noProducts": "Nincs termék.",
         "scanToStart": "Szkennelj egy terméket a kezdéshez!",
         "safety": "Bizt.: {value}%",
