@@ -73,6 +73,8 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
       userId: userId,
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
+      isRegistered: false, // Anonymous vote
+      votedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
     };
 
