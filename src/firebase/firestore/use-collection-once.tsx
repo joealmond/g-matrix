@@ -10,8 +10,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-
-export type WithId<T> = T & { id: string };
+import type { WithId } from './use-collection';
 
 export interface UseCollectionOnceResult<T> {
   data: WithId<T>[] | null;
