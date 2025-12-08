@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: isUserLoading } = useUser();
   // Use isRealAdmin to allow access even when viewing as user
-  const { isRealAdmin, isLoading: isAdminLoading } = useAdmin();
+  const { isRealAdmin, isLoading: isAdminLoading, error: adminError } = useAdmin();
   const router = useRouter();
   const isLoading = isUserLoading || isAdminLoading;
 
@@ -20,9 +20,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       isUserLoading, 
       isRealAdmin, 
       isAdminLoading, 
-      isLoading 
+      isLoading,
+      adminError
     });
-  }, [user, isUserLoading, isRealAdmin, isAdminLoading, isLoading]);
+  }, [user, isUserLoading, isRealAdmin, isAdminLoading, isLoading, adminError]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -30,11 +31,16 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         console.log('[AdminGuard] No user, redirecting to login');
         router.push('/login');
       } else if (!isRealAdmin) {
+        if (adminError) {
+          console.error('[AdminGuard] Admin check failed with error:', adminError);
+          // Optionally stay on page or show error instead of redirecting?
+          // For now, let's see the error.
+        }
         console.log('[AdminGuard] Not admin, redirecting to home');
         router.push('/');
       }
     }
-  }, [user, isRealAdmin, isLoading, router]);
+  }, [user, isRealAdmin, isLoading, router, adminError]);
 
   if (isLoading) {
     return (

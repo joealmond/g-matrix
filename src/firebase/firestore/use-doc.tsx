@@ -7,6 +7,7 @@ import {
   DocumentData,
   FirestoreError,
   DocumentSnapshot,
+  SnapshotMetadata,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -22,6 +23,7 @@ export interface UseDocResult<T> {
   data: WithId<T> | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+  metadata?: SnapshotMetadata;
 }
 
 /**
@@ -36,22 +38,39 @@ export interface UseDocResult<T> {
  * @template T Optional type for document data. Defaults to any.
  * @param {DocumentReference<DocumentData> | null | undefined} docRef -
  * The Firestore DocumentReference. Waits if null/undefined.
+ * @param {Object} options - Optional configuration.
  * @returns {UseDocResult<T>} Object with data, isLoading, error.
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  options?: { includeMetadataChanges?: boolean }
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(!!memoizedDocRef);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [metadata, setMetadata] = useState<SnapshotMetadata | undefined>(undefined);
+  const [lastRefPath, setLastRefPath] = useState<string | undefined>(undefined);
+
+  // Force loading state reset when ref changes (pattern: state update during render)
+  const currentPath = memoizedDocRef?.path;
+  if (currentPath !== lastRefPath) {
+    setLastRefPath(currentPath);
+    setIsLoading(!!memoizedDocRef);
+    if (!!memoizedDocRef) {
+      setData(null);
+      setError(null);
+      setMetadata(undefined);
+    }
+  }
 
   useEffect(() => {
     if (!memoizedDocRef) {
       setData(null);
       setIsLoading(false);
       setError(null);
+      setMetadata(undefined);
       return;
     }
 
@@ -61,7 +80,9 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
+      { includeMetadataChanges: options?.includeMetadataChanges },
       (snapshot: DocumentSnapshot<DocumentData>) => {
+        setMetadata(snapshot.metadata);
         if (snapshot.exists()) {
           setData({ ...(snapshot.data() as T), id: snapshot.id });
         } else {
@@ -87,7 +108,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, options?.includeMetadataChanges]); // Re-run if the memoizedDocRef changes.
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, metadata };
 }
