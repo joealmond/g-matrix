@@ -20,10 +20,10 @@ export function DynamicHeaderButtons() {
   const auth = useAuth();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const { user, loading: userLoading } = useUser();
-  const { isAdmin, isLoading: adminLoading } = useAdmin();
+  const { isAdmin, isRealAdmin, isLoading: adminLoading } = useAdmin();
 
   const isLoading = userLoading || (user && adminLoading);
-  const isAdminPage = pathname.startsWith('/admin');
+  const isAdminPage = pathname.startsWith('/admin') || pathname.startsWith('/hu/admin') || pathname.startsWith('/en/admin');
 
   const handleScanClick = () => {
     setDialogOpen(true);
@@ -53,11 +53,6 @@ export function DynamicHeaderButtons() {
       const isAnonymous = user.isAnonymous;
       return (
         <>
-          {isAdmin && !isAdminPage && (
-            <Button variant="outline" asChild>
-              <Link href="/admin">{t('admin')}</Link>
-            </Button>
-          )}
           {/* User avatar - show photo for Google users, generic icon for anonymous */}
           <Avatar className="h-8 w-8">
             {!isAnonymous && user.photoURL ? (
