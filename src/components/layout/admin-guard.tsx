@@ -13,11 +13,24 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isLoading = isUserLoading || isAdminLoading;
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[AdminGuard] State:', { 
+      user: user?.uid, 
+      isUserLoading, 
+      isRealAdmin, 
+      isAdminLoading, 
+      isLoading 
+    });
+  }, [user, isUserLoading, isRealAdmin, isAdminLoading, isLoading]);
+
   useEffect(() => {
     if (!isLoading) {
       if (!user) {
+        console.log('[AdminGuard] No user, redirecting to login');
         router.push('/login');
       } else if (!isRealAdmin) {
+        console.log('[AdminGuard] Not admin, redirecting to home');
         router.push('/');
       }
     }
