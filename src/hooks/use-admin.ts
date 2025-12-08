@@ -5,6 +5,7 @@ import { doc, DocumentReference } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { User } from 'firebase/auth';
 import { useImpersonate } from './use-impersonate';
+import { useState, useEffect } from 'react';
 
 interface UseAdminResult {
   isAdmin: boolean;
@@ -25,6 +26,9 @@ export function useAdmin(): UseAdminResult {
   const { user, loading: isUserLoading } = useUser();
   const firestore = useFirestore();
   const { isViewingAsUser } = useImpersonate();
+  
+  // Track if we've ever successfully checked admin status for this user
+  const [hasCheckedAdmin, setHasCheckedAdmin] = useState(false);
 
   const adminDocRef = useMemoFirebase(
     () => getAdminDocRef(firestore, user),
@@ -33,11 +37,22 @@ export function useAdmin(): UseAdminResult {
 
   const { data: adminDoc, isLoading: isAdminDocLoading } = useDoc(adminDocRef);
 
+  // Reset hasCheckedAdmin when user changes
+  useEffect(() => {
+    setHasCheckedAdmin(false);
+  }, [user?.uid]);
+
+  // Mark as checked once we get a result (loading becomes false with a valid docRef)
+  useEffect(() => {
+    if (adminDocRef && !isAdminDocLoading) {
+      setHasCheckedAdmin(true);
+    }
+  }, [adminDocRef, isAdminDocLoading]);
+
   // We're loading if:
   // 1. User is still loading
-  // 2. OR we have a user but the admin doc is still loading
-  // 3. OR we have a user but no docRef yet (firestore not ready)
-  const isLoading = isUserLoading || (!!user && (isAdminDocLoading || !adminDocRef));
+  // 2. OR we have a user but haven't checked admin status yet
+  const isLoading = isUserLoading || (!!user && !hasCheckedAdmin);
   
   const isRealAdmin = !!adminDoc;
   
