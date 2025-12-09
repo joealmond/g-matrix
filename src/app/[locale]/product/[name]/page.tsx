@@ -421,60 +421,67 @@ export default function ProductDetailsPage() {
 
           {/* Chart Card */}
           <Card className="h-full" ref={chartCardRef}>
-            <CardHeader>
-              <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="font-headline">
+            <CardHeader className="space-y-2">
+              <div className="flex flex-col gap-1 items-start">
+                <CardTitle className="font-headline text-xl">
                   {chartMode === 'vibe' ? t('overallVibe') : t('overallValue')}
                 </CardTitle>
-                {/* Quadrant Badges - inline with title */}
-                {(() => {
-                  const isTasty = (product.avgTaste || 0) >= 50;
-                  const isSafe = (product.avgSafety || 0) >= 50;
-                  let vibeQuadrant = '';
-                  let vibeColor = '';
-                  if (isTasty && isSafe) { vibeQuadrant = t('holyGrail'); vibeColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
-                  else if (!isTasty && isSafe) { vibeQuadrant = t('survivorFood'); vibeColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
-                  else if (isTasty && !isSafe) { vibeQuadrant = t('russianRoulette'); vibeColor = 'bg-orange-500/10 text-orange-500 border-orange-500/30'; }
-                  else { vibeQuadrant = t('theBin'); vibeColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
-                  return (
-                    <Badge variant="outline" className={`${vibeColor} px-2 py-0.5 text-xs`}>
-                      🎯 {vibeQuadrant}
-                    </Badge>
-                  );
-                })()}
-                {product.avgPrice && product.avgPrice > 0 && (() => {
-                  const isTasty = (product.avgTaste || 0) >= 50;
-                  const isCheap = product.avgPrice <= 2.5;
-                  let valueQuadrant = '';
-                  let valueColor = '';
-                  if (isTasty && isCheap) { valueQuadrant = t('theSteal'); valueColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
-                  else if (!isTasty && isCheap) { valueQuadrant = t('cheapFiller'); valueColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
-                  else if (isTasty && !isCheap) { valueQuadrant = t('treat'); valueColor = 'bg-blue-500/10 text-blue-500 border-blue-500/30'; }
-                  else { valueQuadrant = t('ripOff'); valueColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
-                  return (
-                    <Badge variant="outline" className={`${valueColor} px-2 py-0.5 text-xs`}>
-                      💰 {valueQuadrant}
-                    </Badge>
-                  );
-                })()}
+                <CardDescription className="text-sm">{t('basedOnVotes', { count: product.voteCount || 0 })}</CardDescription>
+                
+                {/* Quadrant Badges - row below description */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {(() => {
+                    const isTasty = (product.avgTaste || 0) >= 50;
+                    const isSafe = (product.avgSafety || 0) >= 50;
+                    let vibeQuadrant = '';
+                    let vibeColor = '';
+                    if (isTasty && isSafe) { vibeQuadrant = t('holyGrail'); vibeColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
+                    else if (!isTasty && isSafe) { vibeQuadrant = t('survivorFood'); vibeColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
+                    else if (isTasty && !isSafe) { vibeQuadrant = t('russianRoulette'); vibeColor = 'bg-orange-500/10 text-orange-500 border-orange-500/30'; }
+                    else { vibeQuadrant = t('theBin'); vibeColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
+                    return (
+                      <Badge variant="outline" className={`${vibeColor} px-2 py-0.5 text-xs`}>
+                        🎯 {vibeQuadrant}
+                      </Badge>
+                    );
+                  })()}
+                  {product.avgPrice && product.avgPrice > 0 && (() => {
+                    const isTasty = (product.avgTaste || 0) >= 50;
+                    const isCheap = product.avgPrice <= 2.5;
+                    let valueQuadrant = '';
+                    let valueColor = '';
+                    if (isTasty && isCheap) { valueQuadrant = t('theSteal'); valueColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
+                    else if (!isTasty && isCheap) { valueQuadrant = t('cheapFiller'); valueColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
+                    else if (isTasty && !isCheap) { valueQuadrant = t('treat'); valueColor = 'bg-blue-500/10 text-blue-500 border-blue-500/30'; }
+                    else { valueQuadrant = t('ripOff'); valueColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
+                    return (
+                      <Badge variant="outline" className={`${valueColor} px-2 py-0.5 text-xs`}>
+                        💰 {valueQuadrant}
+                      </Badge>
+                    );
+                  })()}
+                </div>
               </div>
-              <CardDescription>{t('basedOnVotes', { count: product.voteCount || 0 })}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('averageSafety')}</p>
+            <CardContent className="space-y-6">
+              {/* Stats - Horizontal alignment */}
+              <div className="flex items-start justify-between text-center px-2">
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('averageSafety')}</p>
                   <p className="text-2xl font-bold">{Math.round(product.avgSafety || 0)}%</p>
-                  {getRatingBadge(product.avgSafety || 0)}
+                  <div className="scale-90 origin-top">
+                    {getRatingBadge(product.avgSafety || 0)}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('averageTaste')}</p>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('averageTaste')}</p>
                   <p className="text-2xl font-bold">{Math.round(product.avgTaste || 0)}%</p>
-                  {getRatingBadge(product.avgTaste || 0)}
+                  <div className="scale-90 origin-top">
+                    {getRatingBadge(product.avgTaste || 0)}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('averagePriceShort')}</p>
+                <div className="flex flex-col items-center gap-1">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('averagePriceShort')}</p>
                   <p className="text-2xl font-bold">
                     {product.avgPrice && product.avgPrice > 0 
                       ? '$'.repeat(Math.round(product.avgPrice))
@@ -482,7 +489,7 @@ export default function ProductDetailsPage() {
                     }
                   </p>
                   {product.avgPrice && product.avgPrice > 0 && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-[10px] px-1.5 h-5">
                       {product.avgPrice <= 2 ? t('cheap') : product.avgPrice >= 4 ? t('expensive') : t('moderate')}
                     </Badge>
                   )}
@@ -507,9 +514,11 @@ export default function ProductDetailsPage() {
                   const yPos = chartMode === 'value' 
                     ? product.avgPrice 
                       ? 100 - ((product.avgPrice - 1) * 20 + 20)  // 1->80%, 5->0%
-                      : 50
+                      : null // No price data, don't show fake average
                     : 100 - (product.avgSafety ?? 50);
                   
+                  if (yPos === null) return null;
+
                   return (
                     <div
                       className="absolute w-4 h-4 rounded-full border-2 border-primary-foreground shadow-lg pointer-events-none"
