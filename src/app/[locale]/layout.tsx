@@ -4,6 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AppLayout } from '@/components/layout/app-layout';
 import { FirebaseClientProvider } from '@/firebase';
 import { ImpersonateProvider } from '@/hooks/use-impersonate';
+import { GeolocationProvider } from '@/hooks/use-geolocation';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages, setRequestLocale, getTranslations} from 'next-intl/server';
 import {routing} from '@/i18n/routing';
@@ -58,7 +59,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <FirebaseClientProvider>
             <ImpersonateProvider>
-              <AppLayout>{children}</AppLayout>
+              <GeolocationProvider>
+                <AppLayout>{children}</AppLayout>
+              </GeolocationProvider>
             </ImpersonateProvider>
           </FirebaseClientProvider>
           <Toaster />

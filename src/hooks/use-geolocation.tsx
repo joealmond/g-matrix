@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
 
 export interface GeolocationCoords {
   lat: number;
@@ -11,10 +11,18 @@ export interface GeolocationState {
   coords: GeolocationCoords | null;
   error: string | null;
   loading: boolean;
+  requestLocation: () => void;
+  clearLocation: () => void;
 }
 
-export function useGeolocation() {
-  const [state, setState] = useState<GeolocationState>({
+const GeolocationContext = createContext<GeolocationState | undefined>(undefined);
+
+export function GeolocationProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<{
+    coords: GeolocationCoords | null;
+    error: string | null;
+    loading: boolean;
+  }>({
     coords: null,
     error: null,
     loading: false,
@@ -78,9 +86,17 @@ export function useGeolocation() {
     });
   }, []);
 
-  return {
-    ...state,
-    requestLocation,
-    clearLocation,
-  };
+  return (
+    <GeolocationContext.Provider value={{ ...state, requestLocation, clearLocation }}>
+      {children}
+    </GeolocationContext.Provider>
+  );
+}
+
+export function useGeolocation() {
+  const context = useContext(GeolocationContext);
+  if (context === undefined) {
+    throw new Error('useGeolocation must be used within a GeolocationProvider');
+  }
+  return context;
 }
