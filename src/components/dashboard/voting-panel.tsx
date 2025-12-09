@@ -8,20 +8,29 @@ import {
   CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   ShieldCheck,
   ShieldAlert,
   ShieldX,
   Flag,
+  MapPin,
+  Locate,
+  Loader2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { collection, doc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { useGeolocation } from '@/hooks/use-geolocation';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Vote, Product } from '@/lib/types';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 import type { ImageAnalysisState } from '@/lib/actions-types';
 import { useTranslations } from 'next-intl';
 
@@ -33,11 +42,36 @@ const IceIcon = () => <svg width="32" height="32" viewBox="0 0 24 24" fill="none
 
 type SafetyVote = 'Clean' | 'Sketchy' | 'Wrecked';
 type TasteVote = 'Yass' | 'Meh' | 'Pass';
+type PriceVote = 1 | 2 | 3 | 4 | 5;
 
 const voteMapping = {
   safety: { 'Clean': 80, 'Sketchy': 50, 'Wrecked': 20 },
   taste: { 'Yass': 80, 'Meh': 50, 'Pass': 20 }
 };
+
+const priceLabels: Record<PriceVote, string> = {
+  1: '$',
+  2: '$$',
+  3: '$$$',
+  4: '$$$$',
+  5: '$$$$$',
+};
+
+// Predefined store list for autocomplete
+const PREDEFINED_STORES = [
+  'Tesco',
+  'Spar',
+  'Aldi',
+  'Lidl',
+  'Penny',
+  'CBA',
+  'DM',
+  'Rossmann',
+  'Müller',
+  'COOP',
+  'Auchan',
+  'Interspar',
+] as const;
 
 interface VotingPanelProps {
   product: Product | null;
@@ -48,10 +82,16 @@ interface VotingPanelProps {
 
 export function VotingPanel({ product, productName, analysisResult, onVibeSubmit }: VotingPanelProps) {
   const [safetyVote, setSafetyVote] = useState<SafetyVote | null>(null);
-  const [tasteVote, setTasteVote] =useState<TasteVote | null>(null);
+  const [tasteVote, setTasteVote] = useState<TasteVote | null>(null);
+  const [priceVote, setPriceVote] = useState<PriceVote | null>(null);
+  const [selectedStore, setSelectedStore] = useState<string>('');
+  const [customStore, setCustomStore] = useState<string>('');
+  const [useLocation, setUseLocation] = useState<boolean>(false);
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { coords, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
   const t = useTranslations('VotingPanel');
+
+  const effectiveStore = selectedStore === 'custom' ? customStore : selectedStore;
 
 
   const handleSafetyVote = (vote: SafetyVote) => {
@@ -61,80 +101,80 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
   const handleTasteVote = (vote: TasteVote) => {
     setTasteVote(current => (current === vote ? null : vote));
   };
+
+  const handlePriceVote = (vote: PriceVote) => {
+    setPriceVote(current => (current === vote ? null : vote));
+  };
   
   const handleSubmit = async () => {
-    if (!safetyVote || !tasteVote || !firestore || !productName || !analysisResult) return;
+    if (!safetyVote || !tasteVote || !productName || !analysisResult) return;
     
     const userId = `anonymous_${Date.now()}`;
     const productId = productName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const productRef = doc(firestore, 'products', productId);
 
-    const voteData: Vote = {
-      userId: userId,
+    // Import and call server action
+    const { submitVote } = await import('@/app/actions');
+    
+    const result = await submitVote({
+      productId,
+      productName,
+      imageUrl: analysisResult.imageUrl || '',
+      aiAnalysis: analysisResult.aiAnalysis || null,
+      userId,
+      isRegistered: false,
       safety: voteMapping.safety[safetyVote],
       taste: voteMapping.taste[tasteVote],
-      isRegistered: false, // Anonymous vote
-      votedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    };
+      price: priceVote ?? undefined,
+      storeName: effectiveStore || undefined,
+      geoPoint: (useLocation && coords) ? coords : undefined,
+    });
 
-    runTransaction(firestore, async (transaction) => {
-      const productDoc = await transaction.get(productRef);
+    if (result.success) {
+      // Show base success toast
+      toast({
+        title: t('vibeSubmitted'),
+        description: t('vibeSubmittedDesc', { productName }),
+      });
       
-      if (!productDoc.exists()) {
-        // --- Create Product ---
-        const newProductData = {
-            name: productName,
-            imageUrl: analysisResult.imageUrl,
-            aiAnalysis: analysisResult.aiAnalysis,
-            avgSafety: voteData.safety, // First vote sets the average
-            avgTaste: voteData.taste,
-            voteCount: 1,
-            createdAt: serverTimestamp(),
-            createdBy: userId,
-        };
-        transaction.set(productRef, newProductData);
-      } else {
-        // --- Update Existing Product ---
-        const existingProductData = productDoc.data() as Product;
-        const oldVoteCount = existingProductData.voteCount || 0;
-        const oldAvgSafety = existingProductData.avgSafety || 0;
-        const oldAvgTaste = existingProductData.avgTaste || 0;
-
-        const newVoteCount = oldVoteCount + 1;
-        const newAvgSafety = ((oldAvgSafety * oldVoteCount) + voteData.safety) / newVoteCount;
-        const newAvgTaste = ((oldAvgTaste * oldVoteCount) + voteData.taste) / newVoteCount;
-        
-        const productUpdateData = {
-          voteCount: newVoteCount,
-          avgSafety: newAvgSafety,
-          avgTaste: newAvgTaste,
-        };
-        transaction.update(productRef, productUpdateData);
+      // Show points earned if any
+      if (result.pointsEarned && result.pointsEarned > 0) {
+        setTimeout(() => {
+          toast({
+            title: `+${result.pointsEarned} Scout Points! 🎉`,
+            description: 'Keep voting to earn badges!',
+          });
+        }, 500);
+      }
+      
+      // Show badge unlocks
+      if (result.newBadges && result.newBadges.length > 0) {
+        setTimeout(() => {
+          toast({
+            title: '🏆 Badge Unlocked!',
+            description: `You earned: ${result.newBadges!.join(', ')}`,
+          });
+        }, 1500);
       }
 
-      // Always create a new vote document
-      const voteRef = doc(firestore, 'products', productId, 'votes', userId);
-      transaction.set(voteRef, voteData);
-    })
-    .then(() => {
-        toast({
-            title: t('vibeSubmitted'),
-            description: t('vibeSubmittedDesc', { productName }),
-        })
-
-        if (onVibeSubmit) {
-          onVibeSubmit(voteData as Vote);
-        }
-    })
-    .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: productRef.path,
-          operation: 'write', 
-          requestResourceData: { vote: voteData },
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
-    });
+      if (onVibeSubmit) {
+        onVibeSubmit({
+          userId,
+          safety: voteMapping.safety[safetyVote],
+          taste: voteMapping.taste[tasteVote],
+          price: priceVote ?? undefined,
+          storeName: effectiveStore || undefined,
+          isRegistered: false,
+          votedAt: new Date() as any,
+          createdAt: new Date() as any,
+        } as Vote);
+      }
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to submit vote',
+        variant: 'destructive',
+      });
+    }
   }
 
 
@@ -213,6 +253,83 @@ export function VotingPanel({ product, productName, analysisResult, onVibeSubmit
                 {t('pass')}
               </span>
             </Button>
+          </div>
+        </div>
+        {/* Price Section */}
+        <div>
+          <h3 className="mb-2 font-semibold text-center">{t('priceQuestion')}</h3>
+          <div className="flex justify-center gap-2">
+            {([1, 2, 3, 4, 5] as PriceVote[]).map((val) => (
+              <Button
+                key={val}
+                variant="outline"
+                onClick={() => handlePriceVote(val)}
+                className={cn(
+                  "group h-16 w-16 flex-col gap-1 transition-all active:scale-95 text-lg font-bold",
+                  priceVote === val
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                    : 'hover:border-amber-500 hover:bg-amber-500/10 hover:text-amber-400'
+                )}
+              >
+                {priceLabels[val]}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {/* Store Section */}
+        <div>
+          <h3 className="mb-2 font-semibold text-center flex items-center justify-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {t('storeQuestion')}
+          </h3>
+          <div className="space-y-2">
+            <Select value={selectedStore} onValueChange={setSelectedStore}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('selectStore')} />
+              </SelectTrigger>
+              <SelectContent>
+                {PREDEFINED_STORES.map((store) => (
+                  <SelectItem key={store} value={store}>
+                    {store}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">{t('customStore')}</SelectItem>
+              </SelectContent>
+            </Select>
+            {selectedStore === 'custom' && (
+              <Input
+                placeholder={t('enterStoreName')}
+                value={customStore}
+                onChange={(e) => setCustomStore(e.target.value)}
+              />
+            )}
+            {/* Use My Location checkbox - only show when a store is selected */}
+            {effectiveStore && (
+              <div className="flex items-center gap-2 mt-2">
+                <Checkbox 
+                  id="use-location" 
+                  checked={useLocation}
+                  onCheckedChange={(checked) => {
+                    setUseLocation(!!checked);
+                    if (checked && !coords) {
+                      requestLocation();
+                    }
+                  }}
+                />
+                <label 
+                  htmlFor="use-location" 
+                  className="text-sm text-muted-foreground flex items-center gap-2 cursor-pointer"
+                >
+                  <Locate className="h-4 w-4" />
+                  {t('useMyLocation')}
+                  {geoLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {useLocation && coords && <span className="text-green-500 text-xs">✓</span>}
+                </label>
+              </div>
+            )}
+            {geoError && (
+              <p className="text-xs text-destructive">{geoError}</p>
+            )}
           </div>
         </div>
       </CardContent>

@@ -6,7 +6,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { useFirestore, useUser } from '@/firebase';
 import { useAdmin } from '@/hooks/use-admin';
-import { Product, Vote } from '@/lib/types';
+import { useGeolocation } from '@/hooks/use-geolocation';
+import { Product, Vote, StoreEntry } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,38 @@ import { useTranslations } from 'next-intl';
 import { useToast } from '@/hooks/use-toast';
 import { useImpersonate } from '@/hooks/use-impersonate';
 import { submitVote, deleteVote } from '@/app/actions';
-import { ThumbsUp, MapPin, DollarSign, Loader2, CheckCircle, Trash2, Users, ShieldCheck, Clock, Eye } from 'lucide-react';
+import { ThumbsUp, MapPin, DollarSign, Loader2, CheckCircle, Trash2, Users, ShieldCheck, Clock, Eye, Navigation, ExternalLink } from 'lucide-react';
+
+// Haversine formula to calculate distance between two GPS points (in km)
+function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Helper to open maps (native on mobile, Google Maps on desktop)
+function openMapsLink(lat: number, lng: number, storeName: string) {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const query = encodeURIComponent(storeName);
+  
+  if (isMobile) {
+    // Try native maps app
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isIOS) {
+      window.location.href = `maps://?q=${query}&ll=${lat},${lng}`;
+    } else {
+      window.location.href = `geo:${lat},${lng}?q=${query}`;
+    }
+  } else {
+    // Desktop: open Google Maps
+    window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank');
+  }
+}
 
 // Helper to format relative time (e.g., "2 hours ago", "3 months ago")
 function getRelativeTimeString(date: Date): string {
@@ -57,6 +89,7 @@ export default function ProductDetailsPage() {
   const [allVotes, setAllVotes] = useState<Vote[]>([]);
   const [userVote, setUserVote] = useState<Vote | null>(null);
   const [viewMode, setViewMode] = useState<'average' | 'myVote' | 'allVotes'>('average');
+  const [chartMode, setChartMode] = useState<'vibe' | 'value'>('vibe');
   
   // Custom vote state
   const [customVibe, setCustomVibe] = useState({ safety: 50, taste: 50 });
@@ -72,6 +105,10 @@ export default function ProductDetailsPage() {
 
   const decodedProductName = decodeURIComponent(params.name as string);
   const productId = decodedProductName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+  
+  // Geolocation for "Near Me" badge
+  const { coords: userCoords } = useGeolocation();
+  const NEAR_ME_RADIUS_KM = 5;
 
   // Fetch product and user's vote
   useEffect(() => {
@@ -382,27 +419,214 @@ export default function ProductDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Vibe Chart Card with View Toggle */}
+          {/* Chart Card */}
           <Card className="h-full" ref={chartCardRef}>
             <CardHeader>
-              <CardTitle className="font-headline">{t('overallVibe')}</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="font-headline">
+                  {chartMode === 'vibe' ? t('overallVibe') : t('overallValue')}
+                </CardTitle>
+                {/* Quadrant Badges - inline with title */}
+                {(() => {
+                  const isTasty = (product.avgTaste || 0) >= 50;
+                  const isSafe = (product.avgSafety || 0) >= 50;
+                  let vibeQuadrant = '';
+                  let vibeColor = '';
+                  if (isTasty && isSafe) { vibeQuadrant = t('holyGrail'); vibeColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
+                  else if (!isTasty && isSafe) { vibeQuadrant = t('survivorFood'); vibeColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
+                  else if (isTasty && !isSafe) { vibeQuadrant = t('russianRoulette'); vibeColor = 'bg-orange-500/10 text-orange-500 border-orange-500/30'; }
+                  else { vibeQuadrant = t('theBin'); vibeColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
+                  return (
+                    <Badge variant="outline" className={`${vibeColor} px-2 py-0.5 text-xs`}>
+                      🎯 {vibeQuadrant}
+                    </Badge>
+                  );
+                })()}
+                {product.avgPrice && product.avgPrice > 0 && (() => {
+                  const isTasty = (product.avgTaste || 0) >= 50;
+                  const isCheap = product.avgPrice <= 2.5;
+                  let valueQuadrant = '';
+                  let valueColor = '';
+                  if (isTasty && isCheap) { valueQuadrant = t('theSteal'); valueColor = 'bg-green-500/10 text-green-500 border-green-500/30'; }
+                  else if (!isTasty && isCheap) { valueQuadrant = t('cheapFiller'); valueColor = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/30'; }
+                  else if (isTasty && !isCheap) { valueQuadrant = t('treat'); valueColor = 'bg-blue-500/10 text-blue-500 border-blue-500/30'; }
+                  else { valueQuadrant = t('ripOff'); valueColor = 'bg-red-500/10 text-red-500 border-red-500/30'; }
+                  return (
+                    <Badge variant="outline" className={`${valueColor} px-2 py-0.5 text-xs`}>
+                      💰 {valueQuadrant}
+                    </Badge>
+                  );
+                })()}
+              </div>
               <CardDescription>{t('basedOnVotes', { count: product.voteCount || 0 })}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Stats */}
-              <div className="flex justify-around text-center">
+              <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-sm text-muted-foreground">{t('averageSafety')}</p>
-                  <p className="text-3xl font-bold">{Math.round(product.avgSafety || 0)}%</p>
+                  <p className="text-2xl font-bold">{Math.round(product.avgSafety || 0)}%</p>
                   {getRatingBadge(product.avgSafety || 0)}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">{t('averageTaste')}</p>
-                  <p className="text-3xl font-bold">{Math.round(product.avgTaste || 0)}%</p>
+                  <p className="text-2xl font-bold">{Math.round(product.avgTaste || 0)}%</p>
                   {getRatingBadge(product.avgTaste || 0)}
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('averagePriceShort')}</p>
+                  <p className="text-2xl font-bold">
+                    {product.avgPrice && product.avgPrice > 0 
+                      ? '$'.repeat(Math.round(product.avgPrice))
+                      : '—'
+                    }
+                  </p>
+                  {product.avgPrice && product.avgPrice > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {product.avgPrice <= 2 ? t('cheap') : product.avgPrice >= 4 ? t('expensive') : t('moderate')}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
+              {/* Chart with dots */}
+              <div className="relative h-[350px]">
+                <ProductVibeChart mode={chartMode} />
+                
+                {/* 
+                  Position calculation:
+                  - Vibe mode: safety 0-100 maps directly, then inverted (100-safety) for CSS top
+                  - Value mode: price 1-5 maps to 20-100 (like main page), then inverted (100-value) for CSS top
+                    Formula: (price - 1) * 20 + 20 gives: 1->20, 2->40, 3->60, 4->80, 5->100
+                    Then CSS top: 100 - chartValue, so cheap(1->20) at bottom (80%), expensive(5->100) at top (0%)
+                */}
+                
+                {/* Average dot */}
+                {viewMode === 'average' && (() => {
+                  const xPos = product.avgTaste ?? 50;
+                  const yPos = chartMode === 'value' 
+                    ? product.avgPrice 
+                      ? 100 - ((product.avgPrice - 1) * 20 + 20)  // 1->80%, 5->0%
+                      : 50
+                    : 100 - (product.avgSafety ?? 50);
+                  
+                  return (
+                    <div
+                      className="absolute w-4 h-4 rounded-full border-2 border-primary-foreground shadow-lg pointer-events-none"
+                      style={{
+                        left: `calc(${xPos}% - 8px)`,
+                        top: `calc(${yPos}% - 8px)`,
+                        backgroundColor: getColorForProduct(product.name),
+                      }}
+                    />
+                  );
+                })()}
+
+                {/* User's vote dot (or impersonated user's vote) */}
+                {viewMode === 'myVote' && effectiveVote && (() => {
+                  const xPos = effectiveVote.taste;
+                  const yPos = chartMode === 'value'
+                    ? effectiveVote.price
+                      ? 100 - ((effectiveVote.price - 1) * 20 + 20)  // 1->80%, 5->0%
+                      : null  // No price vote
+                    : 100 - effectiveVote.safety;
+                  
+                  if (chartMode === 'value' && yPos === null) {
+                    return (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                        <p className="text-muted-foreground text-sm text-center px-4">
+                          {t('noPriceVote')}
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div
+                      className={`absolute w-5 h-5 rounded-full border-2 shadow-lg pointer-events-none ${
+                        impersonatedUserId ? 'border-yellow-500' : 'border-white'
+                      }`}
+                      style={{
+                        left: `calc(${xPos}% - 10px)`,
+                        top: `calc(${yPos}% - 10px)`,
+                        backgroundColor: getColorForProduct(product.name),
+                      }}
+                    />
+                  );
+                })()}
+                {viewMode === 'myVote' && !effectiveVote && !isLoggedIn && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+                    <p className="text-muted-foreground">
+                      {impersonatedUserId ? t('userHasNotVoted') : t('noVoteYet')}
+                    </p>
+                  </div>
+                )}
+
+                {/* All votes dots */}
+                {viewMode === 'allVotes' && allVotes.map((vote, idx) => {
+                  const xPos = vote.taste;
+                  const yPos = chartMode === 'value'
+                    ? vote.price
+                      ? 100 - ((vote.price - 1) * 20 + 20)  // 1->80%, 5->0%
+                      : null  // Skip votes without price in value mode
+                    : 100 - vote.safety;
+                  
+                  // In value mode, skip votes without price
+                  if (chartMode === 'value' && yPos === null) return null;
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className={`absolute rounded-full shadow-sm pointer-events-none transition-all ${
+                        highlightedVoteId === vote.userId 
+                          ? 'w-5 h-5 ring-2 ring-primary ring-offset-2 z-10' 
+                          : 'w-3 h-3'
+                      }`}
+                      style={{
+                        left: `calc(${xPos}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
+                        top: `calc(${yPos}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
+                        opacity: highlightedVoteId && highlightedVoteId !== vote.userId ? 0.4 : 0.9,
+                        backgroundColor: getColorForProduct(product.name),
+                      }}
+                      title={vote.isRegistered ? t('verifiedUser') : t('anonymousUser')}
+                    />
+                  );
+                })}
+                
+                {/* Draggable dot for voting - only when logged in and in myVote mode and not impersonating */}
+                {/* Note: Only show in Vibe mode since DraggableDot works with safety/taste */}
+                {isLoggedIn && viewMode === 'myVote' && !isImpersonatingOtherUser && chartMode === 'vibe' && (
+                  <DraggableDot 
+                    safety={customVibe.safety} 
+                    taste={customVibe.taste} 
+                    onVibeChange={handleVibeChange}
+                  />
+                )}
+              </div>
+              
+              {/* Lens Toggle - centered below chart */}
+              <div className="flex justify-center">
+                <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                  <Button
+                    variant={chartMode === 'vibe' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setChartMode('vibe')}
+                    className="text-xs"
+                  >
+                    🎯 {t('vibeLens')}
+                  </Button>
+                  <Button
+                    variant={chartMode === 'value' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setChartMode('value')}
+                    className="text-xs"
+                    disabled={!product.avgPrice || product.avgPrice <= 0}
+                  >
+                    💰 {t('valueLens')}
+                  </Button>
+                </div>
+              </div>
+              
               {/* View Mode Tabs */}
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
@@ -427,72 +651,6 @@ export default function ProductDetailsPage() {
                 </div>
               )}
 
-              {/* Chart with dots */}
-              <div className="relative h-[350px]">
-                <ProductVibeChart />
-                
-                {/* Average dot */}
-                {viewMode === 'average' && product.avgTaste !== undefined && product.avgSafety !== undefined && (
-                  <div
-                    className="absolute w-4 h-4 rounded-full border-2 border-primary-foreground shadow-lg pointer-events-none"
-                    style={{
-                      left: `calc(${product.avgTaste}% - 8px)`,
-                      top: `calc(${100 - product.avgSafety}% - 8px)`,
-                      backgroundColor: getColorForProduct(product.name),
-                    }}
-                  />
-                )}
-
-                {/* User's vote dot (or impersonated user's vote) */}
-                {viewMode === 'myVote' && effectiveVote && (
-                  <div
-                    className={`absolute w-5 h-5 rounded-full border-2 shadow-lg pointer-events-none ${
-                      impersonatedUserId ? 'border-yellow-500' : 'border-white'
-                    }`}
-                    style={{
-                      left: `calc(${effectiveVote.taste}% - 10px)`,
-                      top: `calc(${100 - effectiveVote.safety}% - 10px)`,
-                      backgroundColor: getColorForProduct(product.name),
-                    }}
-                  />
-                )}
-                {viewMode === 'myVote' && !effectiveVote && !isLoggedIn && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-                    <p className="text-muted-foreground">
-                      {impersonatedUserId ? t('userHasNotVoted') : t('noVoteYet')}
-                    </p>
-                  </div>
-                )}
-
-                {/* All votes dots */}
-                {viewMode === 'allVotes' && allVotes.map((vote, idx) => (
-                  <div
-                    key={idx}
-                    className={`absolute rounded-full shadow-sm pointer-events-none transition-all ${
-                      highlightedVoteId === vote.userId 
-                        ? 'w-5 h-5 ring-2 ring-primary ring-offset-2 z-10' 
-                        : 'w-3 h-3'
-                    }`}
-                    style={{
-                      left: `calc(${vote.taste}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
-                      top: `calc(${100 - vote.safety}% - ${highlightedVoteId === vote.userId ? 10 : 6}px)`,
-                      opacity: highlightedVoteId && highlightedVoteId !== vote.userId ? 0.4 : 0.9,
-                      backgroundColor: getColorForProduct(product.name),
-                    }}
-                    title={vote.isRegistered ? t('verifiedUser') : t('anonymousUser')}
-                  />
-                ))}
-                
-                {/* Draggable dot for voting - only when logged in and in myVote mode and not impersonating */}
-                {isLoggedIn && viewMode === 'myVote' && !isImpersonatingOtherUser && (
-                  <DraggableDot 
-                    safety={customVibe.safety} 
-                    taste={customVibe.taste} 
-                    onVibeChange={handleVibeChange}
-                  />
-                )}
-              </div>
-              
               {/* Voting controls - inline, only when logged in and in myVote mode */}
               {isLoggedIn && viewMode === 'myVote' && !isImpersonatingOtherUser && (
                 <div className="space-y-4 pt-2 border-t">
@@ -589,35 +747,110 @@ export default function ProductDetailsPage() {
             </CardContent>
           </Card>
 
-          {/* Price & Location Card */}
+          {/* Purchase Info Card - Combined Store + Price entries */}
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">{t('purchaseInfo')}</CardTitle>
-              <CardDescription>{t('purchaseInfoDescription')}</CardDescription>
+              <CardDescription>{t('purchaseInfoDescriptionNew')}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('price')}</p>
-                  {product.price ? (
-                    <p className="font-semibold">{product.price} {product.currency || 'USD'}</p>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">{t('notAvailable')}</p>
+            <CardContent className="space-y-3">
+              {product.stores && product.stores.length > 0 ? (
+                <>
+                  {product.stores.map((store, idx) => {
+                    // Calculate freshness
+                    const lastSeen = store.lastSeenAt instanceof Date 
+                      ? store.lastSeenAt 
+                      : (store.lastSeenAt as any)?.toDate?.() 
+                        ? (store.lastSeenAt as any).toDate()
+                        : new Date(store.lastSeenAt as unknown as string);
+                    const daysSince = Math.floor((Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24));
+                    const freshnessClass = daysSince < 7 
+                      ? 'border-green-500/50' 
+                      : daysSince < 30 
+                        ? 'border-yellow-500/50' 
+                        : 'border-muted opacity-60';
+                    
+                    // Check if store is near user
+                    const isNearMe = store.geoPoint && userCoords && 
+                      getDistanceKm(userCoords.lat, userCoords.lng, store.geoPoint.lat, store.geoPoint.lng) <= NEAR_ME_RADIUS_KM;
+                    
+                    const hasLocation = !!store.geoPoint;
+                    const hasPrice = store.price && store.price > 0;
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center gap-3 p-3 rounded-lg border ${freshnessClass} bg-card hover:bg-muted/50 transition-colors ${hasLocation ? 'cursor-pointer' : ''}`}
+                        onClick={() => hasLocation && openMapsLink(store.geoPoint!.lat, store.geoPoint!.lng, store.name)}
+                      >
+                        {/* Price indicator - prominent on left */}
+                        <div className="flex flex-col items-center justify-center w-16 h-16 rounded-md bg-primary/10 flex-shrink-0 border border-primary/20">
+                          {hasPrice ? (
+                            <>
+                              <span className="text-lg font-bold text-primary">
+                                {'$'.repeat(store.price!)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {store.price === 1 && t('cheap')}
+                                {store.price === 2 && t('budget')}
+                                {store.price === 3 && t('moderate')}
+                                {store.price === 4 && t('pricey')}
+                                {store.price === 5 && t('expensive')}
+                              </span>
+                            </>
+                          ) : (
+                            <DollarSign className="h-6 w-6 text-muted-foreground opacity-30" />
+                          )}
+                        </div>
+                        
+                        {/* Store info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">{store.name}</p>
+                            {isNearMe && (
+                              <Badge variant="default" className="bg-green-500 text-white text-xs">
+                                {t('nearMe')}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{getRelativeTimeString(lastSeen)}</span>
+                            {hasLocation && (
+                              <>
+                                <span>•</span>
+                                <Navigation className="h-3 w-3" />
+                                <span>{t('tapForDirections')}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* External link indicator */}
+                        {hasLocation && (
+                          <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Average price summary */}
+                  {product.avgPrice && product.avgPrice > 0 && (
+                    <div className="pt-3 border-t flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{t('averagePriceAcrossStores')}</span>
+                      <span className="font-bold text-primary">
+                        {'$'.repeat(Math.round(product.avgPrice))}
+                      </span>
+                    </div>
                   )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">{t('noStoreDataYet')}</p>
+                  <p className="text-xs mt-1">{t('beFirstToReport')}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('purchaseLocation')}</p>
-                  {product.purchaseLocation ? (
-                    <p className="font-semibold">{product.purchaseLocation}</p>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">{t('notAvailable')}</p>
-                  )}
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

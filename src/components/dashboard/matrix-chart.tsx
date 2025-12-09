@@ -58,15 +58,21 @@ const chartConfig = {
   taste: {
     label: 'Taste',
   },
+  price: {
+    label: 'Price',
+  },
   product: {
     label: 'Product',
   },
 };
 
+export type ChartMode = 'vibe' | 'value';
+
 type MatrixChartProps = {
   chartData: Product[];
   highlightedProduct?: string | null;
   onPointClick?: (productName: string) => void;
+  mode?: ChartMode;
 };
 
 const CustomDot = (props: any) => {
@@ -98,22 +104,37 @@ export function MatrixChart({
   chartData,
   highlightedProduct,
   onPointClick,
+  mode = 'vibe',
 }: MatrixChartProps) {
   const isMobile = useIsMobile();
   const t = useTranslations('MatrixChart');
   
+  // Map data based on mode
+  // For Value lens: price 1 (cheap) -> 20 (bottom), price 5 (expensive) -> 100 (top)
   const dataWithCoords = chartData
     .filter(item => item.avgTaste !== undefined && item.avgSafety !== undefined)
-    .map(item => ({...item, taste: item.avgTaste, safety: item.avgSafety, product: item.name}));
+    .map(item => {
+      // Direct mapping: 1->20, 5->100 (cheap at bottom, expensive at top)
+      const priceChartValue = item.avgPrice ? (item.avgPrice - 1) * 20 + 20 : 50; // 1->20, 5->100, no price->50
+      return {
+        ...item,
+        taste: item.avgTaste,
+        safety: item.avgSafety,
+        price: priceChartValue,
+        product: item.name,
+      };
+    });
 
   const showDots = dataWithCoords.length > 0;
+  const yDataKey = mode === 'vibe' ? 'safety' : 'price';
+  const yAxisLabel = mode === 'vibe' ? t('safetyAxisLabel') : t('priceAxisLabel');
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">{t('title')}</CardTitle>
+        <CardTitle className="font-headline">{mode === 'vibe' ? t('title') : t('valueLensTitle')}</CardTitle>
         <CardDescription className="flex items-center gap-1">
-          <span>{t('safetyLabel')}</span>
+          <span>{mode === 'vibe' ? t('safetyLabel') : t('priceLabel')}</span>
           <ArrowUp className="h-4 w-4" />
           <span>{t('vsLabel')}</span>
           <ArrowRight className="h-4 w-4" />
@@ -133,45 +154,45 @@ export function MatrixChart({
                 left: isMobile ? -20 : 0,
               }}
             >
-                {/* Quadrant Backgrounds */}
-                {/* Top-Right: Holy Grail (Green) */}
+                {/* Quadrant Backgrounds - colors depend on mode */}
+                {/* Top-Right: Vibe=Holy Grail(Green), Value=Treat(Yellow) */}
                 <ReferenceArea
                   x1={50}
                   x2={100}
                   y1={50}
                   y2={100}
-                  stroke="hsl(var(--accent) / 0.2)"
-                  fill="hsl(var(--accent) / 0.1)"
+                  stroke={mode === 'vibe' ? "hsl(var(--accent) / 0.2)" : "hsl(var(--muted) / 0.3)"}
+                  fill={mode === 'vibe' ? "hsl(var(--accent) / 0.1)" : "hsl(var(--muted) / 0.2)"}
                   ifOverflow="visible"
                 />
-                {/* Top-Left: Survivor Food (Yellow/Muted) */}
+                {/* Top-Left: Vibe=Survivor Food(Muted), Value=Rip-off(Red) */}
                 <ReferenceArea
                   x1={0}
                   x2={50}
                   y1={50}
                   y2={100}
-                  stroke="hsl(var(--muted) / 0.3)"
-                  fill="hsl(var(--muted) / 0.2)"
+                  stroke={mode === 'vibe' ? "hsl(var(--muted) / 0.3)" : "hsl(var(--destructive) / 0.3)"}
+                  fill={mode === 'vibe' ? "hsl(var(--muted) / 0.2)" : "hsl(var(--destructive) / 0.2)"}
                   ifOverflow="visible"
                 />
-                {/* Bottom-Right: Russian Roulette (Red) */}
+                {/* Bottom-Right: Vibe=Russian Roulette(Red), Value=The Steal(Green) */}
                 <ReferenceArea
                   x1={50}
                   x2={100}
                   y1={0}
                   y2={50}
-                  stroke="hsl(var(--destructive) / 0.2)"
-                  fill="hsl(var(--destructive) / 0.1)"
+                  stroke={mode === 'vibe' ? "hsl(var(--destructive) / 0.2)" : "hsl(var(--accent) / 0.2)"}
+                  fill={mode === 'vibe' ? "hsl(var(--destructive) / 0.1)" : "hsl(var(--accent) / 0.1)"}
                   ifOverflow="visible"
                 />
-                {/* Bottom-Left: The Bin (Red) */}
+                {/* Bottom-Left: Vibe=The Bin(Red), Value=Cheap Filler(Muted) */}
                 <ReferenceArea
                   x1={0}
                   x2={50}
                   y1={0}
                   y2={50}
-                  stroke="hsl(var(--destructive) / 0.3)"
-                  fill="hsl(var(--destructive) / 0.2)"
+                  stroke={mode === 'vibe' ? "hsl(var(--destructive) / 0.3)" : "hsl(var(--muted) / 0.3)"}
+                  fill={mode === 'vibe' ? "hsl(var(--destructive) / 0.2)" : "hsl(var(--muted) / 0.2)"}
                   ifOverflow="visible"
                 />
 
@@ -197,16 +218,25 @@ export function MatrixChart({
                   />
                 </XAxis>
                 <YAxis
-                  dataKey="safety"
+                  dataKey={yDataKey}
                   type="number"
-                  name="Safety"
+                  name={mode === 'vibe' ? 'Safety' : 'Price'}
                   domain={[0, 100]}
+                  ticks={mode === 'vibe' ? [0, 25, 50, 75, 100] : [20, 40, 60, 80, 100]}
+                  tickFormatter={mode === 'vibe' 
+                    ? (value: number) => `${value}` 
+                    : (value: number) => {
+                        // Map Y values to dollar signs: 20=$, 40=$$, 60=$$$, 80=$$$$, 100=$$$$$
+                        const dollarMap: Record<number, string> = { 20: '$', 40: '$$', 60: '$$$', 80: '$$$$', 100: '$$$$$' };
+                        return dollarMap[value] || '';
+                      }
+                  }
                   stroke="hsl(var(--foreground))"
                   tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
                   tickLine={{ stroke: 'hsl(var(--muted-foreground))' }}
                 >
                   <Label
-                    value={t('safetyAxisLabel')}
+                    value={yAxisLabel}
                     angle={-90}
                     offset={isMobile ? 0 : 10}
                     position="insideLeft"
@@ -221,14 +251,27 @@ export function MatrixChart({
                     const { x = 0, y = 0, width, height } = cartesianViewBox;
                     const cx = x + width / 2;
                     const cy = y + height / 2;
-                    return (
-                      <>
-                        <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('holyGrail')}</text>
-                        <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('survivorFood')}</text>
-                        <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('theBin')}</text>
-                        <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('russianRoulette')}</text>
-                      </>
-                    );
+                    
+                    if (mode === 'vibe') {
+                      return (
+                        <>
+                          <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('holyGrail')}</text>
+                          <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('survivorFood')}</text>
+                          <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('theBin')}</text>
+                          <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('russianRoulette')}</text>
+                        </>
+                      );
+                    } else {
+                      // Value lens labels
+                      return (
+                        <>
+                          <text x={cx + width/4} y={cy - height/4} fill="hsl(var(--accent-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('theSteal')}</text>
+                          <text x={cx - width/4} y={cy - height/4} fill="hsl(var(--foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('cheapFiller')}</text>
+                          <text x={cx - width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('ripOff')}</text>
+                          <text x={cx + width/4} y={cy + height/4} fill="hsl(var(--destructive-foreground))" textAnchor="middle" dominantBaseline="middle" className="font-bold opacity-50 pointer-events-none">{t('treat')}</text>
+                        </>
+                      );
+                    }
                   }}
                 />
 

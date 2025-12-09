@@ -8,17 +8,20 @@ export interface Product {
     // Computed weighted averages (registeredSum*2 + anonymousSum) / (registeredCount*2 + anonymousCount)
     avgSafety: number;
     avgTaste: number;
+    avgPrice: number; // 1-5 scale (1=Cheap, 5=Expensive)
     voteCount: number; // Total votes (registered + anonymous)
     
     // Registered user vote tracking (2x weight)
     registeredVoteCount: number;
     registeredSafetySum: number;
     registeredTasteSum: number;
+    registeredPriceSum: number;
     
     // Anonymous user vote tracking (1x weight)
     anonymousVoteCount: number;
     anonymousSafetySum: number;
     anonymousTasteSum: number;
+    anonymousPriceSum: number;
     
     // Future fields - placeholders
     ingredients?: string[];
@@ -27,17 +30,48 @@ export interface Product {
     currency?: string;
     purchaseLocation?: string;
     
+    // Store availability tracking
+    stores?: StoreEntry[];
+    
     // Metadata
     createdAt?: FieldValue;
     createdBy?: string;
+}
+
+export interface GeoPoint {
+    lat: number;
+    lng: number;
+}
+
+export interface StoreEntry {
+    name: string;           // e.g., "Tesco", "Spar"
+    lastSeenAt: FieldValue | Date; // When someone last confirmed availability
+    geoPoint?: GeoPoint;    // Optional GPS coordinates
+    price?: number;         // 1-5 price rating reported at this store
 }
 
 export interface Vote {
     userId: string;
     safety: number;
     taste: number;
+    price?: number; // 1-5 (1=Cheap/$, 5=Expensive/$$$$$). Optional.
+    storeName?: string; // Where the user found/bought the product. Optional.
     isRegistered: boolean; // true if user signed in with Google, false if anonymous
     votedAt: FieldValue; // When the vote was cast (used for time-decay weighting)
     createdAt: FieldValue;
     updatedAt?: FieldValue;
+}
+
+// ============ GAMIFICATION ============
+
+export interface UserProfile {
+    points: number;                 // Total Scout Points earned
+    badges: string[];               // Badge IDs earned (e.g., 'first_scout', 'trailblazer')
+    totalVotes: number;             // Lifetime vote count
+    newProductVotes: number;        // First votes on new products (discoveries)
+    storesTagged: string[];         // Unique store names this user has tagged
+    gpsVotes: number;               // Votes that included GPS coordinates
+    lastVoteDate?: Date | string;   // For streak tracking (ISO string or Date)
+    currentStreak: number;          // Consecutive days voted
+    longestStreak: number;          // Best streak ever achieved
 }

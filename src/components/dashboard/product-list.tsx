@@ -11,7 +11,7 @@ import type { Product } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Users, ShieldCheck } from 'lucide-react';
+import { Users, ShieldCheck, MapPin } from 'lucide-react';
 
 type ProductListProps = {
   chartData: Product[];
@@ -90,6 +90,39 @@ export function ProductList({ chartData, onItemClick, highlightedProduct, loadin
                       </Badge>
                     )}
                   </div>
+                  {/* Store badges with freshness indicator */}
+                  {item.stores && item.stores.length > 0 && (
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      {item.stores.slice(0, 3).map((store: any) => {
+                        // Calculate freshness based on lastSeenAt
+                        let opacity = 'opacity-100';
+                        if (store.lastSeenAt) {
+                          const lastSeen = store.lastSeenAt instanceof Date 
+                            ? store.lastSeenAt 
+                            : (store.lastSeenAt.toDate ? store.lastSeenAt.toDate() : new Date(store.lastSeenAt));
+                          const daysSince = (Date.now() - lastSeen.getTime()) / (1000 * 60 * 60 * 24);
+                          if (daysSince > 30) {
+                            opacity = 'opacity-30';
+                          } else if (daysSince > 7) {
+                            opacity = 'opacity-60';
+                          }
+                        }
+                        return (
+                          <Badge 
+                            key={store.name} 
+                            variant="outline" 
+                            className={`text-xs px-1 py-0 text-muted-foreground ${opacity}`}
+                          >
+                            {store.name}
+                          </Badge>
+                        );
+                      })}
+                      {item.stores.length > 3 && (
+                        <span className="text-xs text-muted-foreground">+{item.stores.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Link>
             </li>

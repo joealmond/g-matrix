@@ -15,6 +15,12 @@ import {
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/config';
+import {
+  calculatePoints,
+  checkNewBadges,
+  calculateStreak,
+  type ProfileStats,
+} from '@/lib/gamification';
 
 // In-memory rate limiting map
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -229,12 +235,15 @@ export async function submitVote(params: {
   isRegistered: boolean;
   safety: number;
   taste: number;
-}): Promise<{ success: boolean; error?: string }> {
+  price?: number;     // 1-5 optional
+  storeName?: string; // Optional store name
+  geoPoint?: { lat: number; lng: number }; // Optional GPS coordinates
+}): Promise<{ success: boolean; error?: string; pointsEarned?: number; newBadges?: string[] }> {
   if (!adminDb) {
     return { success: false, error: 'Database not available' };
   }
 
-  const { productId, productName, imageUrl, aiAnalysis, userId, isRegistered, safety, taste } = params;
+  const { productId, productName, imageUrl, aiAnalysis, userId, isRegistered, safety, taste, price, storeName, geoPoint } = params;
   const productRef = adminDb.collection('products').doc(productId);
   const voteRef = productRef.collection('votes').doc(userId);
 
@@ -254,14 +263,20 @@ export async function submitVote(params: {
           registeredVoteCount: isRegistered ? 1 : 0,
           registeredSafetySum: isRegistered ? safety : 0,
           registeredTasteSum: isRegistered ? taste : 0,
+          registeredPriceSum: isRegistered && price ? price : 0,
           anonymousVoteCount: isRegistered ? 0 : 1,
           anonymousSafetySum: isRegistered ? 0 : safety,
           anonymousTasteSum: isRegistered ? 0 : taste,
+          anonymousPriceSum: isRegistered || !price ? 0 : price,
           voteCount: 1,
           
           // Calculate initial weighted averages
           avgSafety: safety,
           avgTaste: taste,
+          avgPrice: price || 0,
+          
+          // Store tracking (use Date instead of FieldValue.serverTimestamp() since it can't be in arrays)
+          stores: storeName ? [{ name: storeName, lastSeenAt: new Date(), ...(geoPoint && { geoPoint }), ...(price && { price }) }] : [],
           
           createdAt: FieldValue.serverTimestamp(),
           createdBy: userId,
@@ -277,6 +292,8 @@ export async function submitVote(params: {
         let anonCount = data.anonymousVoteCount || 0;
         let anonSafetySum = data.anonymousSafetySum || 0;
         let anonTasteSum = data.anonymousTasteSum || 0;
+        let anonPriceSum = data.anonymousPriceSum || 0;
+        let regPriceSum = data.registeredPriceSum || 0;
         let totalVoteCount = data.voteCount || 0;
         
         if (voteDoc.exists) {
@@ -287,10 +304,12 @@ export async function submitVote(params: {
           if (wasRegistered) {
             regSafetySum -= oldVote.safety;
             regTasteSum -= oldVote.taste;
+            if (oldVote.price) regPriceSum -= oldVote.price;
             regCount -= 1;
           } else {
             anonSafetySum -= oldVote.safety;
             anonTasteSum -= oldVote.taste;
+            if (oldVote.price) anonPriceSum -= oldVote.price;
             anonCount -= 1;
           }
           totalVoteCount -= 1;
@@ -300,10 +319,12 @@ export async function submitVote(params: {
         if (isRegistered) {
           regSafetySum += safety;
           regTasteSum += taste;
+          if (price) regPriceSum += price;
           regCount += 1;
         } else {
           anonSafetySum += safety;
           anonTasteSum += taste;
+          if (price) anonPriceSum += price;
           anonCount += 1;
         }
         totalVoteCount += 1;
@@ -311,18 +332,44 @@ export async function submitVote(params: {
         // Calculate new weighted averages
         const newAvgSafety = calculateWeightedAverage(regSafetySum, regCount, anonSafetySum, anonCount);
         const newAvgTaste = calculateWeightedAverage(regTasteSum, regCount, anonTasteSum, anonCount);
+        const newAvgPrice = calculateWeightedAverage(regPriceSum, regCount, anonPriceSum, anonCount);
         
-        transaction.update(productRef, {
+        const updateData: any = {
           registeredVoteCount: regCount,
           registeredSafetySum: regSafetySum,
           registeredTasteSum: regTasteSum,
+          registeredPriceSum: regPriceSum,
           anonymousVoteCount: anonCount,
           anonymousSafetySum: anonSafetySum,
           anonymousTasteSum: anonTasteSum,
+          anonymousPriceSum: anonPriceSum,
           voteCount: totalVoteCount,
           avgSafety: newAvgSafety,
           avgTaste: newAvgTaste,
-        });
+          avgPrice: newAvgPrice,
+        };
+        
+        // Update stores array if a store was provided
+        if (storeName) {
+          const existingStores = data.stores || [];
+          const storeIndex = existingStores.findIndex((s: any) => s.name.toLowerCase() === storeName.toLowerCase());
+          
+          const storeEntry = { 
+            name: storeName, 
+            lastSeenAt: new Date(),
+            ...(geoPoint && { geoPoint }),
+            ...(price && { price })
+          };
+          
+          if (storeIndex >= 0) {
+            existingStores[storeIndex] = storeEntry;
+          } else {
+            existingStores.push(storeEntry);
+          }
+          updateData.stores = existingStores;
+        }
+        
+        transaction.update(productRef, updateData);
       }
       
       // Set/update the vote document
@@ -330,17 +377,116 @@ export async function submitVote(params: {
         userId: userId,
         safety: safety,
         taste: taste,
+        price: price || null,
+        storeName: storeName || null,
         isRegistered: isRegistered,
-        votedAt: FieldValue.serverTimestamp(), // Always update votedAt to current time
+        votedAt: FieldValue.serverTimestamp(),
         createdAt: voteDoc.exists ? voteDoc.data()!.createdAt : FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
     });
 
+    // ============ GAMIFICATION: Award points and check badges ============
+    let pointsEarned = 0;
+    let newBadgeIds: string[] = [];
+    
+    // Only award points to registered users
+    if (isRegistered && adminDb) {
+      try {
+        const userRef = adminDb.collection('users').doc(userId);
+        
+        await adminDb.runTransaction(async (transaction) => {
+          const userDoc = await transaction.get(userRef);
+          const now = new Date();
+          
+          // Determine if this was a new product (we created it in this vote)
+          const productDocCheck = await transaction.get(productRef);
+          const isNewProduct = productDocCheck.exists && productDocCheck.data()?.voteCount === 1;
+          
+          // Count how many votes this user cast today (for daily streak bonus)
+          // We'll estimate based on lastVoteDate - if same day, assume at least 1 prior
+          const userData = userDoc.exists ? userDoc.data()! : {};
+          const lastVoteDate = userData.lastVoteDate ? new Date(userData.lastVoteDate) : null;
+          const isSameDay = lastVoteDate && 
+            lastVoteDate.getFullYear() === now.getFullYear() &&
+            lastVoteDate.getMonth() === now.getMonth() &&
+            lastVoteDate.getDate() === now.getDate();
+          const votesTodayCount = isSameDay ? (userData.votesToday || 0) : 0;
+          
+          // Calculate points for this vote
+          pointsEarned = calculatePoints({
+            hasPrice: !!price,
+            hasStore: !!storeName,
+            hasGps: !!geoPoint,
+            isNewProduct,
+            votesTodayCount,
+          });
+          
+          // Calculate streak
+          const streakResult = calculateStreak(
+            userData.lastVoteDate,
+            userData.currentStreak || 0,
+            now
+          );
+          
+          // Build updated profile stats
+          const existingBadges: string[] = userData.badges || [];
+          const existingStoresTagged: string[] = userData.storesTagged || [];
+          
+          const updatedProfile: ProfileStats = {
+            points: (userData.points || 0) + pointsEarned,
+            totalVotes: (userData.totalVotes || 0) + 1,
+            newProductVotes: (userData.newProductVotes || 0) + (isNewProduct ? 1 : 0),
+            storesTagged: storeName && !existingStoresTagged.includes(storeName) 
+              ? [...existingStoresTagged, storeName] 
+              : existingStoresTagged,
+            gpsVotes: (userData.gpsVotes || 0) + (geoPoint ? 1 : 0),
+            currentStreak: streakResult.currentStreak,
+            longestStreak: Math.max(userData.longestStreak || 0, streakResult.currentStreak),
+          };
+          
+          // Check for new badges
+          const newBadges = checkNewBadges(updatedProfile, existingBadges);
+          newBadgeIds = newBadges.map(b => b.id);
+          
+          // Update user document
+          const userUpdate: any = {
+            points: updatedProfile.points,
+            totalVotes: updatedProfile.totalVotes,
+            newProductVotes: updatedProfile.newProductVotes,
+            storesTagged: updatedProfile.storesTagged,
+            gpsVotes: updatedProfile.gpsVotes,
+            currentStreak: updatedProfile.currentStreak,
+            longestStreak: updatedProfile.longestStreak,
+            lastVoteDate: now.toISOString(),
+            votesToday: isSameDay ? votesTodayCount + 1 : 1,
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+          
+          if (newBadgeIds.length > 0) {
+            userUpdate.badges = [...existingBadges, ...newBadgeIds];
+          }
+          
+          if (userDoc.exists) {
+            transaction.update(userRef, userUpdate);
+          } else {
+            transaction.set(userRef, {
+              ...userUpdate,
+              badges: newBadgeIds,
+              createdAt: FieldValue.serverTimestamp(),
+            });
+          }
+        });
+      } catch (gamificationError) {
+        // Log but don't fail the vote if gamification fails
+        console.error('Gamification update failed:', gamificationError);
+      }
+    }
+
     revalidatePath('/');
     revalidatePath(`/product/${productId}`);
     
-    return { success: true };
+    return { success: true, pointsEarned, newBadges: newBadgeIds };
   } catch (error: any) {
     console.error('Vote submission error:', error);
     return { success: false, error: error.message };
@@ -525,6 +671,50 @@ export async function recalculateAllProductsWithTimeDecay(): Promise<{
     } else {
       errors++;
       console.error(`Failed to recalculate ${doc.id}:`, result.error);
+    }
+  }
+
+  revalidatePath('/');
+  
+  return { success: errors === 0, processed, errors };
+}
+
+// --- SEED RANDOM PRICE VALUES FOR EXISTING PRODUCTS ---
+// One-time utility to populate avgPrice for products missing price data
+export async function seedRandomPrices(): Promise<{
+  success: boolean;
+  processed: number;
+  errors: number;
+}> {
+  if (!adminDb) {
+    return { success: false, processed: 0, errors: 1 };
+  }
+
+  const productsSnapshot = await adminDb.collection('products').get();
+  let processed = 0;
+  let errors = 0;
+
+  for (const doc of productsSnapshot.docs) {
+    try {
+      const data = doc.data();
+      
+      // Only update products that don't have avgPrice set or have avgPrice of 0
+      if (!data.avgPrice || data.avgPrice === 0) {
+        // Generate random price between 1 and 5
+        const randomPrice = Math.floor(Math.random() * 5) + 1;
+        
+        await doc.ref.update({
+          avgPrice: randomPrice,
+          // Also set the price sums to match (assuming 1 vote for simplicity)
+          anonymousPriceSum: randomPrice,
+          registeredPriceSum: 0,
+        });
+        
+        processed++;
+      }
+    } catch (error: any) {
+      errors++;
+      console.error(`Failed to seed price for ${doc.id}:`, error.message);
     }
   }
 
